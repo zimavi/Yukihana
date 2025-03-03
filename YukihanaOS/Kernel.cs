@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Cosmos.Core.Multiboot;
+using System.Threading;
+using YukihanaOS.KernelRelated.Utils;
 using Sys = Cosmos.System;
 
 namespace YukihanaOS
@@ -8,17 +8,17 @@ namespace YukihanaOS
     public class Kernel : Sys.Kernel
     {
 
+        public const string KERNEL_VERSION = "HikariKernel v1.0";
+
         protected override void BeforeRun()
         {
-            Console.WriteLine("Cosmos booted successfully. Type a line of text to get it echoed back.");
+            ShellPrint.WorkK("Booting up: " + KERNEL_VERSION + "...");
+            Thread.Sleep(3000);
+            ShellPrint.OkK("Booting up");
         }
 
+        // This shouldn't run
         protected override void Run()
-        {
-            Console.Write("Input: ");
-            var input = Console.ReadLine();
-            Console.Write("Text typed: ");
-            Console.WriteLine(input);
-        }
+        { }
     }
 }
