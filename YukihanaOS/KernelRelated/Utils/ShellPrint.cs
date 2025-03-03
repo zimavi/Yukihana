@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Yukihana OS 2025 Yukihana OS Contributors
+// Licensed under the GPL-3.0 License. See LICENSE for details.
+
+using System;
 
 namespace YukihanaOS.KernelRelated.Utils
 {

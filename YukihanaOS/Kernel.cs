@@ -1,4 +1,6 @@
-﻿using Cosmos.Core.Multiboot;
+﻿// Yukihana OS 2025 Yukihana OS Contributors
+// Licensed under the GPL-3.0 License. See LICENSE for details.
+
 using System.Threading;
 using YukihanaOS.KernelRelated.Utils;
 using Sys = Cosmos.System;
