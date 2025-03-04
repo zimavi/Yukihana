@@ -51,5 +51,32 @@ namespace YukihanaOS.KernelRelated.Managers
         {
             _isInitialized = false;
         }
+
+        public IKernelModule GetModuleInstance(string name)
+        {
+            foreach (var module in _modules)
+            {
+                if (module.Name.Equals(name))
+                {
+                    return module;
+                }
+            }
+            return null;
+        }
+
+        public object SendModuleMessage(string name, out bool hasBeenSent, params object[] args)
+        {
+            foreach (var module in _modules)
+            {
+                if (module.Name.Equals(name))
+                {
+                    hasBeenSent = true;
+                    return module.SendMessage(args);
+                }
+            }
+            hasBeenSent = false;
+            return null;
+        }
+
     }
 }

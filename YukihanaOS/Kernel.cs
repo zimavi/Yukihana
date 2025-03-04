@@ -2,11 +2,14 @@
 // Licensed under the GPL-3.0 License. See LICENSE for details.
 
 using System;
+using System.Collections.Generic;
 using Cosmos.Core;
+using Cosmos.System.Coroutines;
 using Cosmos.System.FileSystem;
 using Cosmos.System.FileSystem.VFS;
 using YukihanaOS.KernelRelated.Debug;
 using YukihanaOS.KernelRelated.Managers;
+using YukihanaOS.KernelRelated.Modules;
 using YukihanaOS.KernelRelated.Utils;
 using Sys = Cosmos.System;
 
@@ -50,6 +53,12 @@ namespace YukihanaOS
             {
                 KernelPanic.Panic("Module manager threw and exception: " + error);
             }
+
+#if MOD_COROUTINES
+            ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)0, new Action(SystemThread));
+            ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)2, new Coroutine(CoroutineExample()));
+            ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)1);
+#endif
         }
 
         // This shouldn't run
@@ -81,6 +90,20 @@ namespace YukihanaOS
             {
                 error = ex.Message;
                 return false;
+            }
+        }
+
+        private void SystemThread()
+        {
+            Console.WriteLine("System thread!");
+        }
+
+        private IEnumerator<CoroutineControlPoint> CoroutineExample()
+        {
+            while (true)
+            {
+                Console.WriteLine("I'm running once per 3 seconds!");
+                yield return WaitFor.Seconds(3);
             }
         }
     }

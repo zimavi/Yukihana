@@ -11,7 +11,7 @@ namespace YukihanaOS.KernelRelated.Modules
 
     internal class CoroutineModule : IKernelModule
     {
-        public string Name => "CoroutinesModule";
+        public string Name => nameof(CoroutineModule);
 
         public string Description => "Kernel module that manages coroutines";
 
@@ -27,7 +27,7 @@ namespace YukihanaOS.KernelRelated.Modules
             {
                 switch (method)
                 {
-                    case 0:             // initialize coroutine pool and add 
+                    case 0:             // initialize coroutine pool and add system thread
                         return initPool(args[1]);
 
                     case 1:             // start coroutine pool
