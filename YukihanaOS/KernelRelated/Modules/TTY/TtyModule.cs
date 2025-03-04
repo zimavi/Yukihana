@@ -54,10 +54,11 @@ namespace YukihanaOS.KernelRelated.Modules
                 return false;
             if (y is not uint height)
                 return false;
-            if (font is not Font fnt)
+            if (font is not PCScreenFont fnt)
                 return false;
 
-            _ttyInstance?.Canvas.Disable();
+            if (_ttyInstance == null)
+                return false;
 
             _ttyInstance = new TTY(width, height, fnt);
 

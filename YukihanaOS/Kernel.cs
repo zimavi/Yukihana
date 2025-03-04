@@ -56,7 +56,7 @@ namespace YukihanaOS
             }
 
 #if MOD_TTY
-            ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)0, (uint)1920, (uint)1080, Fonts.Font18);
+            ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)0, (uint)1280, (uint)720, Fonts.Font18);
 #endif
 
 #if MOD_COROUTINES
