@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License. See LICENSE for details.
 
 using System;
+using YukihanaOS.KernelRelated.Debug;
 
 namespace YukihanaOS.KernelRelated.Utils
 {
@@ -13,12 +14,21 @@ namespace YukihanaOS.KernelRelated.Utils
         private const string _OK_PADDING = "   OK  ";
         private const string _WORKING_PADDING = "  ***  ";
 
+        public static char ClearLineChar = ' ';
+        public static bool KernelPrintEnabled = true;
+        public static bool DoLogKernelPrint = true;     // only used when panicing so we don't break loop
+
         /// <summary>
         /// Prints kernel logs
         /// </summary>
         /// <param name="str">string to print</param>
         public static void PrintK(string str)
         {
+            if (DoLogKernelPrint)
+                Logger.DoKernelLog("[" + _PRINT_PADDING + "] " + str);
+            if (!KernelPrintEnabled)
+                return;
+
             var origColor = Console.ForegroundColor;
             ClearLine();
 
@@ -39,6 +49,10 @@ namespace YukihanaOS.KernelRelated.Utils
         /// <param name="str">string to print</param>
         public static void WarnK(string str, bool printOnLineAbove = false)
         {
+            if (DoLogKernelPrint)
+                Logger.DoKernelLog("[" + _WARN_PADDING + "] " + str);
+            if (!KernelPrintEnabled)
+                return;
             var origColor = Console.ForegroundColor;
             ClearLine();
 
@@ -70,6 +84,10 @@ namespace YukihanaOS.KernelRelated.Utils
         /// <param name="str">string to print</param>
         public static void ErrorK(string str, bool printOnLineAbove = false)
         {
+            if (DoLogKernelPrint)
+                Logger.DoKernelLog("[" + _ERROR_PADDING + "] " + str);
+            if (!KernelPrintEnabled)
+                return;
             var origColor = Console.ForegroundColor;
             ClearLine();
 
@@ -101,6 +119,10 @@ namespace YukihanaOS.KernelRelated.Utils
         /// <param name="str">string to print</param>
         public static void OkK(string str, bool printOnCurrentLine = false)
         {
+            if (DoLogKernelPrint)
+                Logger.DoKernelLog("[" + _OK_PADDING + "] " + str);
+            if (!KernelPrintEnabled)
+                return;
             var origColor = Console.ForegroundColor;
             ClearLine();
 
@@ -132,6 +154,10 @@ namespace YukihanaOS.KernelRelated.Utils
         /// <param name="str">string to print</param>
         public static void WorkK(string str)
         {
+            if (DoLogKernelPrint)
+                Logger.DoKernelLog("[" + _WORKING_PADDING + "] " + str);
+            if (!KernelPrintEnabled)
+                return;
             var origColor = Console.ForegroundColor;
             ClearLine();
 
@@ -139,7 +165,7 @@ namespace YukihanaOS.KernelRelated.Utils
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.Write("[");
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.ForegroundColor = ConsoleColor.Red;
             Console.Write(_WORKING_PADDING);
 
             Console.ForegroundColor = ConsoleColor.Gray;
@@ -158,7 +184,7 @@ namespace YukihanaOS.KernelRelated.Utils
 
 
             Console.SetCursorPosition(0, Console.CursorTop);
-            Console.Write(new string('\0', Console.WindowWidth - 1));
+            Console.Write(new string(ClearLineChar, Console.WindowWidth - 1));
 
 
             Console.SetCursorPosition(0, currLineCursor);

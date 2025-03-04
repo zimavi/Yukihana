@@ -1,7 +1,10 @@
 ﻿// Yukihana OS 2025 Yukihana OS Contributors
 // Licensed under the GPL-3.0 License. See LICENSE for details.
 
-using System.Threading;
+using System;
+using Cosmos.Core;
+using Cosmos.System.FileSystem;
+using Cosmos.System.FileSystem.VFS;
 using YukihanaOS.KernelRelated.Utils;
 using Sys = Cosmos.System;
 
@@ -12,15 +15,59 @@ namespace YukihanaOS
 
         public const string KERNEL_VERSION = "HikariKernel v1.0";
 
+        public static string CPU_Brand { get; private set; }
+        public static string CPU_Vendor { get; private set; }
+        public static long CPU_ClockSpeed { get; private set; }
+        public static ulong CPU_Uptime { get; private set; }
+
+        public static CosmosVFS FileSystem { get; private set; }
+
         protected override void BeforeRun()
         {
-            ShellPrint.WorkK("Booting up: " + KERNEL_VERSION + "...");
-            Thread.Sleep(3000);
-            ShellPrint.OkK("Booting up");
+            ShellPrint.WorkK("Collecting hardware info");
+            if (!CollectCPUID(out string error))
+                ShellPrint.WarnK("Collecting hardware info: Failed to collect hardware info", true);
+            else
+                ShellPrint.OkK("Collecting hardware info");
+
+            // VFX won't be as kernel component as there aren't options
+            ShellPrint.PrintK("Initializing VFS");
+            FileSystem = new();
+            VFSManager.RegisterVFS(FileSystem);
+
+            BootstrapResourceLoader.LoadResources();
         }
 
         // This shouldn't run
         protected override void Run()
         { }
+
+        private bool CollectCPUID(out string error)
+        {
+            try
+            {
+                if (CPU.CanReadCPUID() != 0)
+                {
+                    CPU_Brand = CPU.GetCPUBrandString();
+                    CPU_Vendor = CPU.GetCPUVendorName();
+                    CPU_Uptime = CPU.GetCPUUptime();
+
+                    // should run last as may through exception
+                    CPU_ClockSpeed = CPU.GetCPUCycleSpeed();
+                    error = null;
+                    return true;
+                }
+                else
+                {
+                    error = "Cannot read CPUID";
+                    return false;
+                }
+            }
+            catch(Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
     }
 }

@@ -22,11 +22,36 @@
         <ExtractMapFile>True</ExtractMapFile>
     </PropertyGroup>
 
+	<PropertyGroup>
+		<Year>$([System.DateTime]::Now.ToString("yyyy"))</Year>
+		<Month>$([System.DateTime]::Now.ToString("MM"))</Month>
+		<Date>$([System.DateTime]::Now.ToString("dd"))</Date>
+		<Time>$([System.DateTime]::Now.ToString("HHmm"))</Time>
+		<WinttRevision>
+			<![CDATA[
+        namespace YukihanaOS.KernelRelated
+{
+    public sealed class VersionInfo
+    {
+        public static readonly string revision = "$(Year)$(Date)$(Month)$(Time)"%3b
+    }
+}]]>
+		</WinttRevision>
+	</PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Cosmos.Build" Version="0-*" NoWarn="NU1604" />
         <PackageReference Include="Cosmos.Debug.Kernel" Version="0-*" NoWarn="NU1604" />
         <PackageReference Include="Cosmos.System2" Version="0-*" NoWarn="NU1604" />
         <PackageReference Include="Cosmos.Plugs" Version="0-*" NoWarn="NU1604" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="isoFiles\" />
+    </ItemGroup>
+
+	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+		<WriteLinesToFile File="KernelRelated\VersionInfo.cs" Lines="$(WinttRevision)" Overwrite="true" />
+	</Target>
 
 </Project>

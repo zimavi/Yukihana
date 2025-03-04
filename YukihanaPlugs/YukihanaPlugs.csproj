@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  
+  </PropertyGroup>
+	
+  <ItemGroup>
+	<PackageReference Include="Cosmos.System2" Version="0-*" NoWarn="NU1604;1605" />
+  </ItemGroup>
+  <ItemGroup>
+	<ProjectReference Include="..\YukihanaOS\YukihanaOS.csproj" />
+  </ItemGroup>
+</Project>
