@@ -29,6 +29,7 @@ namespace YukihanaOS
         #region Managers
 
         internal static ModuleManager ModuleManager { get; private set; }
+        public static IOManager IOManager { get; private set; }
 
         #endregion
 
@@ -105,7 +106,7 @@ namespace YukihanaOS
 
         private void SystemThread()
         {
-#if MOD_TTY
+#if !MOD_TTY
             ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)2, "System thread!");
 #else
             Console.WriteLine("System thread!");

@@ -50,6 +50,7 @@
         <PackageReference Include="Cosmos.Debug.Kernel" Version="0-*" NoWarn="NU1604" />
         <PackageReference Include="Cosmos.System2" Version="0-*" NoWarn="NU1604" />
         <PackageReference Include="Cosmos.Plugs" Version="0-*" NoWarn="NU1604" />
+		<PlugsReference Include="..\YukihanaPlugs\bin\Debug\net6.0\YukihanaPlugs.dll" />
     </ItemGroup>
 
     <ItemGroup>

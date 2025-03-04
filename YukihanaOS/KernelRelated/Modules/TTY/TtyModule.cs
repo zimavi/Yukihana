@@ -37,6 +37,10 @@ namespace YukihanaOS.KernelRelated.Modules
                         return true;
                     case 4:     // destroy TTY
                         return destroy();
+                    case 5:     // print without updating display buffer
+                        return printNoUpd(args[1]);
+                    case 6:     // update display buffer maually
+                        return updateBuff();
                 }
             }
 
@@ -74,6 +78,25 @@ namespace YukihanaOS.KernelRelated.Modules
             return true;
         }
 
+        private object printNoUpd(object value)
+        {
+            if (_ttyInstance == null)
+                return false;
+
+            _ttyInstance.WriteNoUpdate(value.ToString());
+            return true;
+        }
+
+        private object updateBuff()
+        {
+            if (_ttyInstance == null)
+                return false;
+
+            _ttyInstance.Update();
+
+            return true;
+        }
+        
         private object printNewLn(object value)
         {
             if (_ttyInstance == null)

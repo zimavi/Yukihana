@@ -34,7 +34,7 @@ namespace YukihanaOS.KernelRelated.Modules
         private uint _foreground = (byte)ConsoleColor.White;
         private uint _background = (byte)ConsoleColor.Black;
 
-        public Canvas Canvas;
+        public VBECanvas Canvas;
 
         private Font _font;
 
@@ -116,7 +116,7 @@ namespace YukihanaOS.KernelRelated.Modules
 
         public TTY(uint x, uint y, PCScreenFont fontToUse)
         {
-            Canvas = FullScreenCanvas.GetFullScreenCanvas(new Mode(x, y, ColorDepth.ColorDepth32));
+            Canvas = new VBECanvas(new Mode(x, y, ColorDepth.ColorDepth32));
 
             _pallete[0] = 0xFF000000; // Black
             _pallete[1] = 0xFF0000AB; // Darkblue

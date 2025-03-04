@@ -10,7 +10,7 @@ namespace YukihanaOS.KernelRelated.Managers
 {
     internal class ModuleManager : IManager
     {
-        public string Name => "ModuleManager";
+        public string Name => nameof(ModuleManager);
         public string Description => "Manages kernel modules";
         public bool IsInitialized => _isInitialized;
 
