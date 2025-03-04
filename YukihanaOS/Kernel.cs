@@ -5,6 +5,8 @@ using System;
 using Cosmos.Core;
 using Cosmos.System.FileSystem;
 using Cosmos.System.FileSystem.VFS;
+using YukihanaOS.KernelRelated.Debug;
+using YukihanaOS.KernelRelated.Managers;
 using YukihanaOS.KernelRelated.Utils;
 using Sys = Cosmos.System;
 
@@ -19,6 +21,12 @@ namespace YukihanaOS
         public static string CPU_Vendor { get; private set; }
         public static long CPU_ClockSpeed { get; private set; }
         public static ulong CPU_Uptime { get; private set; }
+
+        #region Managers
+
+        internal static ModuleManager ModuleManager { get; private set; }
+
+        #endregion
 
         public static CosmosVFS FileSystem { get; private set; }
 
@@ -36,6 +44,12 @@ namespace YukihanaOS
             VFSManager.RegisterVFS(FileSystem);
 
             BootstrapResourceLoader.LoadResources();
+
+            ModuleManager = new ModuleManager();
+            if (!ModuleManager.Initialize(out error))
+            {
+                KernelPanic.Panic("Module manager threw and exception: " + error);
+            }
         }
 
         // This shouldn't run
