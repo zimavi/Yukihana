@@ -10,6 +10,7 @@ using Cosmos.System.FileSystem.VFS;
 using YukihanaOS.KernelRelated.Debug;
 using YukihanaOS.KernelRelated.Managers;
 using YukihanaOS.KernelRelated.Modules;
+using YukihanaOS.KernelRelated.Resources;
 using YukihanaOS.KernelRelated.Utils;
 using Sys = Cosmos.System;
 
@@ -54,10 +55,19 @@ namespace YukihanaOS
                 KernelPanic.Panic("Module manager threw and exception: " + error);
             }
 
+#if MOD_TTY
+            ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)0, (uint)1920, (uint)1080, Fonts.Font18);
+#endif
+
 #if MOD_COROUTINES
             ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)0, new Action(SystemThread));
             ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)2, new Coroutine(CoroutineExample()));
             ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)1);
+#else
+            while(true)
+            {
+                SystemThread();
+            }
 #endif
         }
 
@@ -95,14 +105,22 @@ namespace YukihanaOS
 
         private void SystemThread()
         {
+#if MOD_TTY
+            ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)2, "System thread!");
+#else
             Console.WriteLine("System thread!");
+#endif
         }
 
         private IEnumerator<CoroutineControlPoint> CoroutineExample()
         {
             while (true)
             {
+#if MOD_TTY
+                ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)2, "I'm running once per 3 seconds!");
+#else
                 Console.WriteLine("I'm running once per 3 seconds!");
+#endif
                 yield return WaitFor.Seconds(3);
             }
         }

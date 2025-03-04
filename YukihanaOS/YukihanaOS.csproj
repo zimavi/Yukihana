@@ -41,7 +41,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-	  <DefineConstants>$(DefineConstants);MOD_COROUTINES</DefineConstants>
+	  <DefineConstants>$(DefineConstants);MOD_COROUTINES;MOD_TTY</DefineConstants>
 	</PropertyGroup>
 
     <ItemGroup>

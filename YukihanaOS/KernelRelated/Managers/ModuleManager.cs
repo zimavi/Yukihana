@@ -25,6 +25,9 @@ namespace YukihanaOS.KernelRelated.Managers
 #if MOD_COROUTINES
                 new CoroutineModule(),
 #endif
+#if MOD_TTY
+                new TtyModule(),
+#endif
             };
 
             foreach (var module in _modules)
