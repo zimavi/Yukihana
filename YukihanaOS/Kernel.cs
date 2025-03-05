@@ -1,10 +1,28 @@
 ﻿// Yukihana OS 2025 Yukihana OS Contributors
 // Licensed under the GPL-3.0 License. See LICENSE for details.
 
+
+/*
+ * THIS KERNEL USES PREPROCESSOR DEFINITIONS TO ENABLE OR
+ * DISABLE MODULES. HERE ARE LIST OF MODULES AVAILABLE:
+ *      
+ *  MOD_COROUTINES  - Adds coroutine management module
+ *  MOD_TTY         - Adds canvas-based TTY support and
+ *                    IO pipe for it
+ *
+ */
+
 using System;
+using System.Collections.Generic;
 using Cosmos.Core;
+using Cosmos.System.Coroutines;
 using Cosmos.System.FileSystem;
 using Cosmos.System.FileSystem.VFS;
+using YukihanaOS.KernelRelated.Debug;
+using YukihanaOS.KernelRelated.Managers;
+using YukihanaOS.KernelRelated.Managers.PipesIO;
+using YukihanaOS.KernelRelated.Modules;
+using YukihanaOS.KernelRelated.Resources;
 using YukihanaOS.KernelRelated.Utils;
 using Sys = Cosmos.System;
 
@@ -20,22 +38,68 @@ namespace YukihanaOS
         public static long CPU_ClockSpeed { get; private set; }
         public static ulong CPU_Uptime { get; private set; }
 
+        public static string CurrentWorkingDirectory { get; set; } = @"0:\";
+
+        #region Managers
+
+        internal static ModuleManager ModuleManager { get; private set; }
+        public static IOManager IOManager { get; private set; }
+
+        // Made to avoid calling IOManager every time you need IO
+        public static IPipeIO IO => IOManager.Pipe;
+
+        #endregion
+
         public static CosmosVFS FileSystem { get; private set; }
 
         protected override void BeforeRun()
         {
-            ShellPrint.WorkK("Collecting hardware info");
-            if (!CollectCPUID(out string error))
-                ShellPrint.WarnK("Collecting hardware info: Failed to collect hardware info", true);
-            else
-                ShellPrint.OkK("Collecting hardware info");
+            try
+            {
+                IOManager = new IOManager();
+                IOManager.Initialize(out _);
 
-            // VFX won't be as kernel component as there aren't options
-            ShellPrint.PrintK("Initializing VFS");
-            FileSystem = new();
-            VFSManager.RegisterVFS(FileSystem);
+                ShellPrint.WorkK("Collecting hardware info");
+                if (!CollectCPUID(out string error))
+                    ShellPrint.WarnK("Collecting hardware info: Failed to collect hardware info", true);
+                else
+                    ShellPrint.OkK("Collecting hardware info");
 
-            BootstrapResourceLoader.LoadResources();
+                // VFX won't be as kernel component as there aren't options
+                ShellPrint.PrintK("Initializing VFS");
+                FileSystem = new();
+                VFSManager.RegisterVFS(FileSystem);
+
+                BootstrapResourceLoader.LoadResources();
+
+                ModuleManager = new ModuleManager();
+                if (!ModuleManager.Initialize(out error))
+                {
+                    KernelPanic.Panic("Module manager threw and exception: " + error);
+                }
+
+#if MOD_TTY
+                Logger.DoBootLog("Initializing TTY screen");
+                ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)0, (uint)1920, (uint)1080, Fonts.Font18);    // 1280x720
+                Logger.DoBootLog("Piping IO to TTY");
+                IOManager.Pipe = new TtyPipe();
+#endif
+
+#if MOD_COROUTINES
+                ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)0, new Action(SystemThread));
+                ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)2, new Coroutine(CoroutineExample()));
+                ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)1);
+#else
+                while(true)
+                {
+                    SystemThread();
+                }
+#endif
+            }
+            catch (Exception ex)
+            {
+                KernelPanic.Panic(ex.Message);
+            }
         }
 
         // This shouldn't run
@@ -67,6 +131,21 @@ namespace YukihanaOS
             {
                 error = ex.Message;
                 return false;
+            }
+        }
+
+        private void SystemThread()
+        {
+            IO.WriteLine("System thread!");
+        }
+
+        private IEnumerator<CoroutineControlPoint> CoroutineExample()
+        {
+            while (true)
+            {
+                IO.WriteLine("I'm running once per 3 seconds!");
+
+                yield return WaitFor.Seconds(3);
             }
         }
     }

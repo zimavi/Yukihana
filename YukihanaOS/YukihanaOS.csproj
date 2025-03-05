@@ -37,13 +37,21 @@
     }
 }]]>
 		</WinttRevision>
+		<OptimizationLevel>0</OptimizationLevel>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <DefineConstants>$(DefineConstants);MOD_COROUTINES;MOD_TTY</DefineConstants>
 	</PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="acryptohashnet" Version="3.1.0" />
         <PackageReference Include="Cosmos.Build" Version="0-*" NoWarn="NU1604" />
+        <PackageReference Include="Cosmos.Coroutines" Version="1.0.1" />
         <PackageReference Include="Cosmos.Debug.Kernel" Version="0-*" NoWarn="NU1604" />
         <PackageReference Include="Cosmos.System2" Version="0-*" NoWarn="NU1604" />
         <PackageReference Include="Cosmos.Plugs" Version="0-*" NoWarn="NU1604" />
+		<PlugsReference Include="..\YukihanaPlugs\bin\Debug\net6.0\YukihanaPlugs.dll" />
     </ItemGroup>
 
     <ItemGroup>

@@ -29,18 +29,18 @@ namespace YukihanaOS.KernelRelated.Utils
             if (!KernelPrintEnabled)
                 return;
 
-            var origColor = Console.ForegroundColor;
+            var origColor = Kernel.IO.ForegroundColor;
             ClearLine();
 
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("[" + _PRINT_PADDING + "] ");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("[" + _PRINT_PADDING + "] ");
 
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(str);
+            Kernel.IO.ForegroundColor = ConsoleColor.White;
+            Kernel.IO.WriteLine(str);
 
 
-            Console.ForegroundColor = origColor;
+            Kernel.IO.ForegroundColor = origColor;
         }
 
         /// <summary>
@@ -53,29 +53,29 @@ namespace YukihanaOS.KernelRelated.Utils
                 Logger.DoKernelLog("[" + _WARN_PADDING + "] " + str);
             if (!KernelPrintEnabled)
                 return;
-            var origColor = Console.ForegroundColor;
+            var origColor = Kernel.IO.ForegroundColor;
             ClearLine();
 
 
             if (printOnLineAbove)
             {
-                Console.SetCursorPosition(0, Console.CursorTop - 1);
+                Kernel.IO.SetCursorPosition(0, Kernel.IO.CursorTop - 1);
             }
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("[");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("[");
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write(_WARN_PADDING);
+            Kernel.IO.ForegroundColor = ConsoleColor.Yellow;
+            Kernel.IO.Write(_WARN_PADDING);
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("] ");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("] ");
 
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(str);
+            Kernel.IO.ForegroundColor = ConsoleColor.White;
+            Kernel.IO.WriteLine(str);
 
 
-            Console.ForegroundColor = origColor;
+            Kernel.IO.ForegroundColor = origColor;
         }
 
         /// <summary>
@@ -88,29 +88,29 @@ namespace YukihanaOS.KernelRelated.Utils
                 Logger.DoKernelLog("[" + _ERROR_PADDING + "] " + str);
             if (!KernelPrintEnabled)
                 return;
-            var origColor = Console.ForegroundColor;
+            var origColor = Kernel.IO.ForegroundColor;
             ClearLine();
 
 
             if (printOnLineAbove)
             {
-                Console.SetCursorPosition(0, Console.CursorTop - 1);
+                Kernel.IO.SetCursorPosition(0, Kernel.IO.CursorTop - 1);
             }
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("[");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("[");
 
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write(_ERROR_PADDING);
+            Kernel.IO.ForegroundColor = ConsoleColor.Red;
+            Kernel.IO.Write(_ERROR_PADDING);
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("] ");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("] ");
 
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(str);
+            Kernel.IO.ForegroundColor = ConsoleColor.White;
+            Kernel.IO.WriteLine(str);
 
 
-            Console.ForegroundColor = origColor;
+            Kernel.IO.ForegroundColor = origColor;
         }
 
         /// <summary>
@@ -123,29 +123,29 @@ namespace YukihanaOS.KernelRelated.Utils
                 Logger.DoKernelLog("[" + _OK_PADDING + "] " + str);
             if (!KernelPrintEnabled)
                 return;
-            var origColor = Console.ForegroundColor;
+            var origColor = Kernel.IO.ForegroundColor;
             ClearLine();
 
 
             if (!printOnCurrentLine)
             {
-                Console.SetCursorPosition(0, Console.CursorTop - 1);
+                Kernel.IO.SetCursorPosition(0, Kernel.IO.CursorTop - 1);
             }
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("[");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("[");
 
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write(_OK_PADDING);
+            Kernel.IO.ForegroundColor = ConsoleColor.Green;
+            Kernel.IO.Write(_OK_PADDING);
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("] ");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("] ");
 
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(str);
+            Kernel.IO.ForegroundColor = ConsoleColor.White;
+            Kernel.IO.WriteLine(str);
 
 
-            Console.ForegroundColor = origColor;
+            Kernel.IO.ForegroundColor = origColor;
         }
 
         /// <summary>
@@ -158,36 +158,36 @@ namespace YukihanaOS.KernelRelated.Utils
                 Logger.DoKernelLog("[" + _WORKING_PADDING + "] " + str);
             if (!KernelPrintEnabled)
                 return;
-            var origColor = Console.ForegroundColor;
+            var origColor = Kernel.IO.ForegroundColor;
             ClearLine();
 
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("[");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("[");
 
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write(_WORKING_PADDING);
+            Kernel.IO.ForegroundColor = ConsoleColor.Red;
+            Kernel.IO.Write(_WORKING_PADDING);
 
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Write("] ");
+            Kernel.IO.ForegroundColor = ConsoleColor.Gray;
+            Kernel.IO.Write("] ");
 
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(str);
+            Kernel.IO.ForegroundColor = ConsoleColor.White;
+            Kernel.IO.WriteLine(str);
 
 
-            Console.ForegroundColor = origColor;
+            Kernel.IO.ForegroundColor = origColor;
         }
 
         public static void ClearLine()
         {
-            int currLineCursor = Console.CursorTop;
+            int currLineCursor = Kernel.IO.CursorTop;
 
 
-            Console.SetCursorPosition(0, Console.CursorTop);
-            Console.Write(new string(ClearLineChar, Console.WindowWidth - 1));
+            Kernel.IO.SetCursorPosition(0, Kernel.IO.CursorTop);
+            Kernel.IO.Write(new string(ClearLineChar, Kernel.IO.WindowWidth - 1));
 
 
-            Console.SetCursorPosition(0, currLineCursor);
+            Kernel.IO.SetCursorPosition(0, currLineCursor);
         }
     }
 }
