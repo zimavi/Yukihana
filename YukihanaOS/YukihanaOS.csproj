@@ -45,6 +45,7 @@
 	</PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="acryptohashnet" Version="3.1.0" />
         <PackageReference Include="Cosmos.Build" Version="0-*" NoWarn="NU1604" />
         <PackageReference Include="Cosmos.Coroutines" Version="1.0.1" />
         <PackageReference Include="Cosmos.Debug.Kernel" Version="0-*" NoWarn="NU1604" />

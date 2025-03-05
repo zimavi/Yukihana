@@ -7,6 +7,7 @@ using YukihanaOS.KernelRelated.Managers.PipesIO;
 
 namespace YukihanaOS.KernelRelated.Managers
 {
+#pragma warning disable CS8632
     public interface IPipeIO
     {
         public void Write(char value);
@@ -41,6 +42,7 @@ namespace YukihanaOS.KernelRelated.Managers
         public int WindowHeight { get; }
 
     }
+#pragma warning restore CS8632
 
     public class IOManager : IManager
     {
