@@ -1,6 +1,17 @@
 ﻿// Yukihana OS 2025 Yukihana OS Contributors
 // Licensed under the GPL-3.0 License. See LICENSE for details.
 
+
+/*
+ * THIS KERNEL USES PREPROCESSOR DEFINITIONS TO ENABLE OR
+ * DISABLE MODULES. HERE ARE LIST OF MODULES AVAILABLE:
+ *      
+ *  MOD_COROUTINES  - Adds coroutine management module
+ *  MOD_TTY         - Adds canvas-based TTY support and
+ *                    IO pipe for it
+ *
+ */
+
 using System;
 using System.Collections.Generic;
 using Cosmos.Core;
@@ -77,10 +88,10 @@ namespace YukihanaOS
                 ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)2, new Coroutine(CoroutineExample()));
                 ModuleManager.SendModuleMessage(nameof(CoroutineModule), out _, (uint)1);
 #else
-            while(true)
-            {
-                SystemThread();
-            }
+                while(true)
+                {
+                    SystemThread();
+                }
 #endif
             }
             catch (Exception ex)
@@ -123,12 +134,6 @@ namespace YukihanaOS
 
         private void SystemThread()
         {
-            // #if MOD_TTY
-            //             ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)2, "System thread!");
-            // #else
-            //             Console.WriteLine("System thread!");
-            // #endif
-
             IO.WriteLine("System thread!");
         }
 
@@ -136,11 +141,6 @@ namespace YukihanaOS
         {
             while (true)
             {
-                // #if MOD_TTY
-                //                 ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)2, "I'm running once per 3 seconds!");
-                // #else
-                //                 Console.WriteLine("I'm running once per 3 seconds!");
-                // #endif
                 IO.WriteLine("I'm running once per 3 seconds!");
 
                 yield return WaitFor.Seconds(3);
