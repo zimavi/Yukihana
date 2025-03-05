@@ -8,6 +8,30 @@ namespace YukihanaOS.KernelRelated.Managers.PipesIO
 {
     internal class ConsolePipe : IPipeIO
     {
+        public ConsoleColor BackgroundColor 
+        { 
+            get => Console.BackgroundColor;
+            set => Console.BackgroundColor = value; 
+        }
+        public ConsoleColor ForegroundColor 
+        {
+            get => Console.ForegroundColor;
+            set => Console.ForegroundColor = value;
+        }
+
+        public int CursorLeft => Console.CursorLeft;
+
+        public int CursorTop => Console.CursorTop;
+
+        public int WindowWidth => Console.WindowWidth;
+
+        public int WindowHeight => Console.WindowHeight;
+
+        public void SetCursorPosition(int left, int top)
+        {
+            Console.SetCursorPosition(left, top);
+        }
+
         public void Write(char value)
         {
             Console.Write(value);

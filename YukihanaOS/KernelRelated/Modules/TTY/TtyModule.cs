@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License. See LICENSE for details.
 
 using System;
+using Cosmos.System.Graphics;
 using Cosmos.System.Graphics.Fonts;
 
 namespace YukihanaOS.KernelRelated.Modules
@@ -41,6 +42,14 @@ namespace YukihanaOS.KernelRelated.Modules
                         return printNoUpd(args[1]);
                     case 6:     // update display buffer maually
                         return updateBuff();
+                    case 7:     // get TTY color
+                        return getColor(args[1]);
+                    case 8:     // set cursor possition
+                        return setCurrPos(args[1], args[2]);
+                    case 9:     // get component of cursor possition
+                        return getCursorPos(args[1]);
+                    case 10:    // get component of TTY screen size
+                        return getScreenSize(args[1]);
                 }
             }
 
@@ -136,9 +145,69 @@ namespace YukihanaOS.KernelRelated.Modules
             if(_ttyInstance == null)
                 return false;
 
-            _ttyInstance.Canvas.Disable();
+            FullScreenCanvas.Disable();
 
             return true;
+        }
+
+        private object getColor(object side)
+        {
+            if (side is not int _side)
+                return false;
+
+            if (_ttyInstance == null)
+                return false;
+
+            if (_side == 0)
+                return _ttyInstance.Background;
+            else if (_side == 1)
+                return _ttyInstance.Foreground;
+            else 
+                return null;
+        }
+
+        private object setCurrPos(object x, object y)
+        {
+            if (x is not int left)
+                return false;
+            if (y is not int top)
+                return false;
+
+            if(_ttyInstance == null)
+                return false;
+
+            _ttyInstance.SetCursorPos(left, top);
+            return true;
+        }
+
+        private object getCursorPos(object component)
+        {
+            if (component is not int comp)
+                return -1;
+            if (_ttyInstance == null)
+                return -1;
+
+            if (comp == 0)
+                return _ttyInstance.X;
+            else if (comp == 1)
+                return _ttyInstance.Y;
+            else
+                return -1;
+        }
+
+        private object getScreenSize(object component)
+        {
+            if (component is not int comp)
+                return -1;
+            if (_ttyInstance == null)
+                return -1;
+
+            if (comp == 0)
+                return _ttyInstance.Cols;
+            else if (comp == 1)
+                return _ttyInstance.Rows;
+            else
+                return -1;
         }
     }
 #endif

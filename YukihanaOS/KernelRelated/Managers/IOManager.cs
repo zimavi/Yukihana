@@ -31,6 +31,14 @@ namespace YukihanaOS.KernelRelated.Managers
         public void WriteLine(string format, object? arg0, object? arg1);
         public void WriteLine(string format, object? arg0, object? arg1, object? arg2);
         public void WriteLine(string format, params object?[] arg);
+        public void SetCursorPosition(int left, int top);
+
+        public ConsoleColor BackgroundColor { get; set; }
+        public ConsoleColor ForegroundColor { get; set; }
+        public int CursorLeft { get; }
+        public int CursorTop { get; }
+        public int WindowWidth { get; }
+        public int WindowHeight { get; }
 
     }
 

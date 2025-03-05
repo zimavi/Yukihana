@@ -11,6 +11,25 @@ namespace YukihanaOS.KernelRelated.Managers.PipesIO
 #if MOD_TTY
     internal class TtyPipe : IPipeIO
     {
+        public ConsoleColor BackgroundColor 
+        {
+            get => (ConsoleColor)Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)7, 0);
+            set => Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)3, 0, value); 
+        }
+        public ConsoleColor ForegroundColor 
+        { 
+            get => (ConsoleColor)Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)7, 1);
+            set => Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)3, 1, value);
+        }
+
+        public int CursorLeft => (int)Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)9, 0);
+
+        public int CursorTop => (int)Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)9, 1);
+
+        public int WindowWidth => (int)Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)10, 0);
+
+        public int WindowHeight => (int)Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)10, 1);
+
         public void Write(char value)
         {
             Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)1, value);
@@ -151,6 +170,11 @@ namespace YukihanaOS.KernelRelated.Managers.PipesIO
         public void WriteLine(string format, params object[] arg)
         {
             Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)1, string.Format(format, arg));
+        }
+
+        public void SetCursorPosition(int left, int top)
+        {
+            Kernel.ModuleManager.SendModuleMessage(nameof(TtyModule), out _, (uint)8, left, top);
         }
     }
 #endif
