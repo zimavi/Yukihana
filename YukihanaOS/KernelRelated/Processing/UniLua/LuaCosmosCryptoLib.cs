@@ -1,8 +1,9 @@
 using System.IO;
 using System.Text;
 using acryptohashnet;
+using YukihanaOS;
 using YukihanaOS.KernelRelated.Utils;
-using Kernel = YukihanaOS.KernelRelated;
+using kKernel = YukihanaOS.KernelRelated;
 
 namespace UniLua
 {
@@ -29,7 +30,7 @@ namespace UniLua
         private static int CRYPTO_md5(ILuaState lua)
         {
             string input = lua.L_CheckString(1);
-            var hashBytes = Kernel.Security.MD5.hash(input);
+            var hashBytes = kKernel.Security.MD5.hash(input);
             lua.PushString(hashBytes);
             return 1;
         }
@@ -37,7 +38,7 @@ namespace UniLua
         private static int CRYPTO_sha256(ILuaState lua)
         {
             string input = lua.L_CheckString(1);
-            var hashBytes = Kernel.Security.Sha256.hash(Encoding.UTF8.GetBytes(input));
+            var hashBytes = kKernel.Security.Sha256.hash(Encoding.UTF8.GetBytes(input));
             lua.PushString(hashBytes);
             return 1;
         }
@@ -53,7 +54,7 @@ namespace UniLua
 
         private static int FILE_CRYPTO_md5(ILuaState lua)
         {
-            string filePath = Path.Combine(GlobalData.CurrentDirectory, lua.L_CheckString(1));
+            string filePath = Path.Combine(Kernel.CurrentWorkingDirectory, lua.L_CheckString(1));
             var hashAlgorithm = new acryptohashnet.MD5();
             using (var stream = File.OpenRead(filePath))
             {
@@ -65,16 +66,16 @@ namespace UniLua
 
         private static int FILE_CRYPTO_sha256(ILuaState lua)
         {
-            string filePath = Path.Combine(GlobalData.CurrentDirectory, lua.L_CheckString(1));
+            string filePath = Path.Combine(Kernel.CurrentWorkingDirectory, lua.L_CheckString(1));
             byte[] file = File.ReadAllBytes(filePath);
-            var hashBytes = Kernel.Security.Sha256.hash(file);
+            var hashBytes = kKernel.Security.Sha256.hash(file);
             lua.PushString(hashBytes);
             return 1;
         }
 
         private static int FILE_CRYPTO_sha512(ILuaState lua)
         {
-            string filePath = Path.Combine(GlobalData.CurrentDirectory, lua.L_CheckString(1));
+            string filePath = Path.Combine(Kernel.CurrentWorkingDirectory, lua.L_CheckString(1));
             var hashAlgorithm = new SHA512();
             using (var stream = File.OpenRead(filePath))
             {

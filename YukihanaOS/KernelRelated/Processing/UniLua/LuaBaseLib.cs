@@ -1,6 +1,7 @@
 
 namespace UniLua
 {
+    using YukihanaOS;
     using Char = System.Char;
     using Int32 = System.Int32;
     using StringBuilder = System.Text.StringBuilder;
@@ -421,7 +422,7 @@ namespace UniLua
 				sb.Append( s );
 				lua.Pop( 1 );
 			}
-			SystemIO.STDOUT.PutLine( sb.ToString() );
+			Kernel.IO.WriteLine( sb.ToString() );
 			return 0;
 		}
 

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using YukihanaOS;
 
 namespace UniLua
 {
@@ -132,7 +133,7 @@ namespace UniLua
 		{
 			var path = lua.ToString(1);
 			if (path.StartsWith('/'))
-				path = GlobalData.CurrentDirectory + path;
+				path = Kernel.CurrentWorkingDirectory + path;
 			try
 			{
 				// TODO: Remake when implementing fs mapping
@@ -159,7 +160,7 @@ namespace UniLua
 		{
 			var path = lua.ToString(1);
             if (path.StartsWith('/'))
-                path = GlobalData.CurrentDirectory + path;
+                path = Kernel.CurrentWorkingDirectory + path;
             var mode = lua.L_OptString(2, "r");
 			FileStream stream;
 			try

@@ -38,6 +38,8 @@ namespace YukihanaOS
         public static long CPU_ClockSpeed { get; private set; }
         public static ulong CPU_Uptime { get; private set; }
 
+        public static string CurrentWorkingDirectory { get; set; } = @"0:\";
+
         #region Managers
 
         internal static ModuleManager ModuleManager { get; private set; }
