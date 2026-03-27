@@ -1,0 +1,12 @@
+{
+  "targetArch": "x64",
+  "qemu": {
+    "memory": "512M",
+    "machineType": "q35",
+    "cpuModel": "max",
+    "enableNetwork": false,
+    "networkPorts": "5555",
+    "serialMode": "stdio",
+    "extraArgs": ""
+  }
+}
