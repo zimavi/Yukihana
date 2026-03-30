@@ -7,11 +7,18 @@ public class RamFs
     private readonly byte[] _blob;
     private readonly Dictionary<string, (int Offset, int Length)> _files;
 
+    public IReadOnlyDictionary<string, (int Offset, int Length)> Files => _files;
+
     public RamFs(byte[] blob, Dictionary<string, (int Offset, int Length)> files)
     {
+        ArgumentNullException.ThrowIfNull(blob);
+        ArgumentNullException.ThrowIfNull(files);
+
         _blob = blob;
-        _files = files;
+        _files = new Dictionary<string, (int Offset, int Length)>(files, StringComparer.Ordinal);
     }
+
+    public static RamFs FromArchive(byte[] archiveBytes) => RamFsArchive.LoadFromArchive(archiveBytes);
 
     public bool Exists(string path)
     {
@@ -49,6 +56,20 @@ public class RamFs
 
     private static string Normalize(string path)
     {
-        return path.Replace("\\", "/").TrimStart('/');
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        path = path.Replace('\\', '/').Trim();
+
+        while (path.StartsWith("./", StringComparison.Ordinal))
+            path = path[2..];
+
+        while (path.StartsWith("/", StringComparison.Ordinal))
+            path = path[1..];
+
+        while (path.Contains("//", StringComparison.Ordinal))
+            path = path.Replace("//", "/");
+
+        return path;
     }
 }

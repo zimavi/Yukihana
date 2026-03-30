@@ -88,7 +88,7 @@ public static class ShellPrint
 
         if (DoLogKernelPrint)
         {
-            Logger.Log(level, LogOrigin.Kernel, finalMessage, member, file, line);
+            Logger.Log(level, LogOrigin.Kernel, $"[{prefix}] {finalMessage}", member, file, line);
         }
 
         if (!KernelPrintEnabled)

@@ -50,7 +50,7 @@ public sealed class OptionalResourceGroup<TState>
         foreach(var member in _members)
         {
             var memberTask = ShellPrint.CreateTask(
-                $"Loading '{member.Description}' for group '{_name}",
+                $"Loading '{member.Description}' for group '{_name}'",
                 "OptionalLoader")
                 .Progress(0)
                 .Display();
@@ -78,7 +78,7 @@ public sealed class OptionalResourceGroup<TState>
 
         Logger.Trace("ORG -> All members have been staged. Applying them to state");
 
-        groupTask.Work().WithText($"Applying asset group '{_name}'").Progress(0).Display();
+        groupTask.Work().WithText($"Applying asset group '{_name}'").Progress(0);
 
         int i = 0;
         foreach(var item in staged)

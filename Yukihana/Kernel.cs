@@ -25,9 +25,9 @@ public class Kernel : Sys.Kernel
 
         Logger.ReportLevel = LogLevel.Trace;
 
-        var ramfsTask = ShellPrint.CreateTask("Initializing...", "RamFS").Progress(0).Work().Display();
+        var ramfsTask = ShellPrint.CreateTask("Initializing...", "ramfs").Progress(0).Work().Display();
 
-        RamFS = new(RamFsData.Blob, RamFsData.Files);
+        RamFS = RamFs.FromArchive(RamFsData.Data);
 
         ramfsTask.Ok().Display();
 

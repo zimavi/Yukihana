@@ -11,6 +11,11 @@ public sealed class RamFsStream : Stream
     public RamFsStream(byte[] buffer, int offset, int length)
     {
         ArgumentNullException.ThrowIfNull(buffer);
+        ArgumentOutOfRangeException.ThrowIfLessThan(offset, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(length, 0);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(offset, buffer.Length - length);
+
+        _buffer = buffer;
         _start = offset;
         _length = length;
         _position = 0;
