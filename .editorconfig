@@ -1,0 +1,134 @@
+root = true
+
+[*.cs]
+
+########################################
+# Formatting
+########################################
+
+dotnet_style_namespace_declarations = file_scoped:error
+
+########################################
+# File Header
+########################################
+
+file_header_template = Copyright (c) 2026 ZIMAVI CHANNEL. All rights reserved.
+
+########################################
+# SYMBOL GROUPS
+########################################
+
+# Types
+dotnet_naming_symbols.types.applicable_kinds = class, struct, enum, delegate
+dotnet_naming_symbols.types.applicable_accessibilities = *
+dotnet_naming_symbols.types.required_modifiers = 
+
+# Interfaces
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.interfaces.applicable_accessibilities = *
+dotnet_naming_symbols.interfaces.required_modifiers = 
+
+# Public members
+dotnet_naming_symbols.public_members.applicable_kinds = property, method, event, field
+dotnet_naming_symbols.public_members.applicable_accessibilities = public
+dotnet_naming_symbols.public_members.required_modifiers = 
+
+# Private fields
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers = 
+
+# Constants (const + static readonly)
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.applicable_accessibilities = *
+dotnet_naming_symbols.constants.required_modifiers = const
+
+dotnet_naming_symbols.static_readonly_as_constants.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_as_constants.applicable_accessibilities = *
+dotnet_naming_symbols.static_readonly_as_constants.required_modifiers = static, readonly
+
+# Parameters
+dotnet_naming_symbols.parameters.applicable_kinds = parameter
+dotnet_naming_symbols.parameters.applicable_accessibilities = *
+dotnet_naming_symbols.parameters.required_modifiers = 
+
+# Locals
+dotnet_naming_symbols.locals.applicable_kinds = local
+dotnet_naming_symbols.locals.applicable_accessibilities = *
+dotnet_naming_symbols.locals.required_modifiers = 
+
+# Generic types
+dotnet_naming_symbols.generic_types.applicable_kinds = type_parameter
+dotnet_naming_symbols.generic_types.applicable_accessibilities = *
+dotnet_naming_symbols.generic_types.required_modifiers = 
+
+########################################
+# NAMING STYLES
+########################################
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_style.camel_case.capitalization = camel_case
+
+dotnet_naming_style._camel_case.capitalization = camel_case
+dotnet_naming_style._camel_case.required_prefix = _
+
+dotnet_naming_style.interface_prefix.capitalization = pascal_case
+dotnet_naming_style.interface_prefix.required_prefix = I
+
+dotnet_naming_style.generic_prefix.capitalization = pascal_case
+dotnet_naming_style.generic_prefix.required_prefix = T
+
+dotnet_naming_style.upper_case.capitalization = all_upper
+dotnet_naming_style.upper_case.word_separator = _
+
+########################################
+# NAMING RULES
+########################################
+
+# const → UPPER_CASE
+dotnet_naming_rule.constants_upper.severity = error
+dotnet_naming_rule.constants_upper.symbols = constants
+dotnet_naming_rule.constants_upper.style = upper_case
+
+# static readonly → UPPER_CASE (treated as constants)
+dotnet_naming_rule.static_readonly_upper.severity = error
+dotnet_naming_rule.static_readonly_upper.symbols = static_readonly_as_constants
+dotnet_naming_rule.static_readonly_upper.style = upper_case
+
+# Interfaces
+dotnet_naming_rule.interfaces_prefix.severity = error
+dotnet_naming_rule.interfaces_prefix.symbols = interfaces
+dotnet_naming_rule.interfaces_prefix.style = interface_prefix
+
+# Types
+dotnet_naming_rule.types_pascal.severity = error
+dotnet_naming_rule.types_pascal.symbols = types
+dotnet_naming_rule.types_pascal.style = pascal_case
+
+# Public members
+dotnet_naming_rule.public_pascal.severity = error
+dotnet_naming_rule.public_pascal.symbols = public_members
+dotnet_naming_rule.public_pascal.style = pascal_case
+
+# Private fields
+dotnet_naming_rule.private_fields_rule.severity = error
+dotnet_naming_rule.private_fields_rule.symbols = private_fields
+dotnet_naming_rule.private_fields_rule.style = _camel_case
+
+# Parameters
+dotnet_naming_rule.parameters_rule.severity = error
+dotnet_naming_rule.parameters_rule.symbols = parameters
+dotnet_naming_rule.parameters_rule.style = camel_case
+
+# Locals
+dotnet_naming_rule.locals_rule.severity = error
+dotnet_naming_rule.locals_rule.symbols = locals
+dotnet_naming_rule.locals_rule.style = camel_case
+
+# Generic types
+dotnet_naming_rule.generic_types_rule.severity = error
+dotnet_naming_rule.generic_types_rule.symbols = generic_types
+dotnet_naming_rule.generic_types_rule.style = generic_prefix
+
+file_header_template = Yukihana OS 2026 Yukihana OS Contributors\nLicensed under the Apache 2.0 License. See LICENSE for details.

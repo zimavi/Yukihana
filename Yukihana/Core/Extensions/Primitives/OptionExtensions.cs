@@ -1,3 +1,6 @@
+// Yukihana OS 2026 Yukihana OS Contributors
+// Licensed under the Apache 2.0 License. See LICENSE for details.
+
 using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.Extensions.Primitives;
@@ -11,12 +14,12 @@ public static class OptionExtensions
             .DefaultIfEmpty(Option<T>.None())
             .First();
     
-    public static Option<R> Select<T, R>(this Option<T> obj, Func<T, R> map) => obj.Map(map);
+    public static Option<TResult> Select<T, TResult>(this Option<T> obj, Func<T, TResult> map) => obj.Map(map);
 
     public static Option<T> Where<T>(this Option<T> obj, Func<T, bool> predicate) =>
         obj.Bind(content => predicate(content) ? obj : Option<T>.None());
 
-    public static Option<TResult> SelectMany<T, R, TResult>(
-        this Option<T> obj, Func<T, Option<R>> bind, Func<T, R, TResult> map) =>
+    public static Option<TResult> SelectMany<T, TR, TResult>(
+        this Option<T> obj, Func<T, Option<TR>> bind, Func<T, TR, TResult> map) =>
         obj.Bind(original => bind(original).Map(result => map(original, result)));
 }

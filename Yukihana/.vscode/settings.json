@@ -7,5 +7,7 @@
     "limine.conf": "ini"
   },
   "editor.formatOnSave": true,
-  "dotnet.defaultSolution": "disable"
+  "dotnet.format.enable": true,
+  "dotnet.defaultSolution": "disable",
+  "csharp.format.enable": true
 }

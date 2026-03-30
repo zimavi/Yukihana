@@ -1,5 +1,7 @@
+// Yukihana OS 2026 Yukihana OS Contributors
+// Licensed under the Apache 2.0 License. See LICENSE for details.
+
 using System.Runtime.CompilerServices;
-using System.Text;
 using Yukihana.Core.Debug;
 
 namespace Yukihana.Core.IO;
@@ -14,7 +16,7 @@ public static class ShellPrint
     private const string ERROR_PADDING   = " ERRO ";
     private const string OK_PADDING      = "  OK  ";
 
-    private static readonly char[] SPINNER = new[] { '|', '/', '-', '\\' };
+    private static readonly char[] SPINNER = ['|', '/', '-', '\\'];
 
     private const char CLEAR_LINE_CHAR = ' ';
 
