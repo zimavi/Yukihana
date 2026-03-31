@@ -4,6 +4,7 @@
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Yukihana.Core.Debug;
+using Yukihana.Core.Extensions.System;
 using Yukihana.Core.IO;
 using Yukihana.Core.IO.Loaders;
 using Yukihana.Core.IO.Loaders.Optional;
@@ -52,6 +53,8 @@ public class Kernel : Sys.Kernel
             },
             () => {}
         );
+
+        ShellPrint.OkK($"System initialization finished at {DateTime.UtcNow.ToFastString("dd-MM-yyyy HH:mm:ss.fff")}", "init");
         
         ShellPrint.InfoK("Panicking for fun :)", "init");
 

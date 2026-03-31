@@ -41,7 +41,7 @@ public class RamFs
         return result;
     }
 
-    public string ReadAllText(string path, Encoding encoding = null)
+    public string ReadAllText(string path, Encoding? encoding = null)
     {
         encoding ??= Encoding.UTF8;
         return encoding.GetString(ReadAllBytes(path));
