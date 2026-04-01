@@ -2,18 +2,25 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Text;
+using Yukihana.Core.Debug;
+using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO.RamFS;
 
 public static class RamFsArchive
 {
-    public static RamFs LoadFromArchive(byte[] archiveBytes)
+    public static Result<RamFs, KernelError> LoadFromArchive(byte[] archiveBytes)
     {
         ArgumentNullException.ThrowIfNull(archiveBytes);
 
         ShellPrint.InfoK($"archive bytes: {archiveBytes.Length}", "ramfs");
 
-        byte[] tarBytes = DecompressGZipStoredDeflate(archiveBytes);
+        var result = DecompressGZipStoredDeflate(archiveBytes);
+
+        if (result.IsFailure)
+            return Result<RamFs, KernelError>.Failure(result.Error);
+        
+        byte[] tarBytes = result.Value;
 
         ShellPrint.InfoK($"tar bytes: {tarBytes.Length}", "ramfs");
 
@@ -37,7 +44,7 @@ public static class RamFsArchive
             long sizeLong = ReadOctal(tarBytes, offset + 124, 12);
 
             if (sizeLong < 0 || sizeLong > int.MaxValue)
-                throw new InvalidDataException($"File too large for RamFs loader: {sizeLong} bytes");
+                return Result<RamFs, KernelError>.Failure(KernelError.Corrupted($"File too large for RamFs loader: {sizeLong} bytes"));
 
             int size = (int)sizeLong;
             string fullName = string.IsNullOrEmpty(prefix) ? name : $"{prefix}/{name}";
@@ -60,7 +67,7 @@ public static class RamFsArchive
             }
 
             if (offset + size > tarBytes.Length)
-                throw new InvalidDataException($"TAR entry overruns archive: {path}");
+                return Result<RamFs, KernelError>.Failure(KernelError.Corrupted($"TAR entry overruns archive: {path}"));
             
             int blobOffset = (int)flatBlob.Length;
             flatBlob.Write(tarBytes, offset, size);
@@ -77,16 +84,16 @@ public static class RamFsArchive
         return new RamFs(flatBlob.ToArray(), files);
     }
 
-    private static byte[] DecompressGZipStoredDeflate(byte[] gzipBytes)
+    private static Result<byte[], KernelError> DecompressGZipStoredDeflate(byte[] gzipBytes)
     {
         if (gzipBytes.Length < 18)
-            throw new InvalidDataException("Input is too short to be a valid gzip stream.");
+            throw new ArgumentException("Input is too short to be a valid gzip stream.");
         
         if (gzipBytes[0] != 0x1F | gzipBytes[1] != 0x8B)
-            throw new InvalidDataException("Invalid gzip magic.");
+            throw new ArgumentException("Invalid gzip magic.");
         
         if (gzipBytes[2] != 8)
-            throw new InvalidDataException("Usupported gzip compression method.");
+            throw new ArgumentException("Usupported gzip compression method.");
         
         int flags = gzipBytes[3];
         int pos = 10;
@@ -94,7 +101,7 @@ public static class RamFsArchive
         if ((flags & 0x04) != 0)
         {
             if (pos + 2 > gzipBytes.Length)
-                throw new InvalidDataException("Corrupt gzip extra field.");
+                return Result<byte[], KernelError>.Failure(KernelError.Corrupted("Corrupt gzip extra field."));
             
             int xlen = gzipBytes[pos] | (gzipBytes[pos + 1] << 8);
             pos += 2 + xlen;
@@ -111,7 +118,7 @@ public static class RamFsArchive
 
         int footerPos = gzipBytes.Length - 8;
         if (footerPos <= pos)
-            throw new InvalidDataException("Corrupt gzip stream.");
+            return Result<byte[], KernelError>.Failure(KernelError.Corrupted("Corrupt gzip stream."));
         
         ShellPrint.InfoK($"deflate payload begins at {pos}, footer at {footerPos}", "ramfs.gzip");
 
@@ -125,7 +132,7 @@ public static class RamFsArchive
             int blockType = reader.ReadBits(2);
 
             if (blockType != 0)
-                throw new InvalidDataException("This loader currently only supports only stored DEFLATE blocks.");
+                return Result<byte[], KernelError>.Failure(KernelError.Corrupted("This loader currently only supports only stored DEFLATE blocks."));
             
             reader.AlignToByte();
 
@@ -133,7 +140,7 @@ public static class RamFsArchive
             ushort nlen = (ushort)reader.ReadBits(16);
 
             if((ushort)~len != nlen)
-                throw new InvalidDataException("Stored DEFLATE block length check failed.");
+                return Result<byte[], KernelError>.Failure(KernelError.Corrupted("Stored DEFLATE block length check failed."));
             
             reader.CopyBytesTo(output, len);
 
@@ -146,11 +153,11 @@ public static class RamFsArchive
         uint expectedSize = ReadUInt32LE(gzipBytes, footerPos + 4);
 
         if (expectedSize != (uint)result.Length)
-            throw new InvalidDataException($"GZip size footer mismatch. Expected {expectedSize}, got {result.Length}.");
+            return Result<byte[], KernelError>.Failure(KernelError.Corrupted($"GZip size footer mismatch. Expected {expectedSize}, got {result.Length}."));
         
         uint actualCrc = Crc32(result);
         if (actualCrc != expectedCrc)
-            throw new InvalidDataException($"GZip CRC mismatch. Expected 0x{expectedCrc:X8}, got 0x{actualCrc:X8}.");
+            return Result<byte[], KernelError>.Failure(KernelError.Corrupted($"GZip CRC mismatch. Expected 0x{expectedCrc:X8}, got 0x{actualCrc:X8}."));
         
         ShellPrint.OkK($"crc ok: 0x{actualCrc:X8}", "ramfs.gzip");
         return result;

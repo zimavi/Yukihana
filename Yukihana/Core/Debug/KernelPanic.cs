@@ -1,6 +1,8 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Cosmos.Kernel.Core.IO;
 using Yukihana.Core.Generated;
@@ -12,6 +14,8 @@ public static class KernelPanic
 {
     private const int MAX_ENTRIES = 20;
 
+    [DoesNotReturn]
+    [StackTraceHidden]
     public static void Panic(
         string panicReason,
         [CallerMemberName] string callerMemberName = "",
@@ -55,6 +59,8 @@ public static class KernelPanic
         Kernel.SpeedrunShutdown = true;
         
         Kernel.Instance.Stop();
+
+        for(;;);
     }
 
     private static void MirrorPanicToSerial(

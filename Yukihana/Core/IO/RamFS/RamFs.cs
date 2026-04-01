@@ -2,6 +2,8 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Text;
+using Yukihana.Core.Debug;
+using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO.RamFS;
 
@@ -21,7 +23,7 @@ public class RamFs
         _files = new Dictionary<string, (int Offset, int Length)>(files, StringComparer.Ordinal);
     }
 
-    public static RamFs FromArchive(byte[] archiveBytes) => RamFsArchive.LoadFromArchive(archiveBytes);
+    public static Result<RamFs, KernelError> FromArchive(byte[] archiveBytes) => RamFsArchive.LoadFromArchive(archiveBytes);
 
     public bool Exists(string path)
     {
@@ -29,30 +31,30 @@ public class RamFs
         return _files.ContainsKey(path);
     }
 
-    public byte[] ReadAllBytes(string path)
+    public Result<byte[], KernelError> ReadAllBytes(string path)
     {
         path = Normalize(path);
 
         if (!_files.TryGetValue(path, out var entry))
-            throw new FileNotFoundException(path);
+            return Result<byte[], KernelError>.Failure(KernelError.NotFound(path));
 
         var result = new byte[entry.Length];
         Buffer.BlockCopy(_blob, entry.Offset, result, 0, entry.Length);
         return result;
     }
 
-    public string ReadAllText(string path, Encoding? encoding = null)
+    public Result<string, KernelError> ReadAllText(string path, Encoding? encoding = null)
     {
         encoding ??= Encoding.UTF8;
-        return encoding.GetString(ReadAllBytes(path));
+        return ReadAllBytes(path).Map(bytes => encoding.GetString(bytes));
     }
 
-    public Stream Open(string path)
+    public Result<Stream, KernelError> Open(string path)
     {
         path = Normalize(path);
 
         if (!_files.TryGetValue(path, out var entry))
-            throw new FileNotFoundException(path);
+            return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
 
         return new RamFsStream(_blob, entry.Offset, entry.Length);
     }

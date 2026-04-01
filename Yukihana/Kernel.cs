@@ -4,6 +4,7 @@
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Yukihana.Core.Debug;
+using Yukihana.Core.Extensions.Primitives;
 using Yukihana.Core.Extensions.System;
 using Yukihana.Core.IO;
 using Yukihana.Core.IO.Loaders;
@@ -30,7 +31,7 @@ public class Kernel : Sys.Kernel
 
         var ramfsTask = ShellPrint.CreateTask("Initializing...", "ramfs").Progress(0).Work().Display();
 
-        RamFS = RamFs.FromArchive(RamFsData.Data);
+        RamFS = RamFs.FromArchive(RamFsData.Data).OrPanic("RamFS was not initialized");
 
         ramfsTask.Ok().Display();
 
@@ -43,9 +44,7 @@ public class Kernel : Sys.Kernel
 
         fontGroup.Add("fonts/zap-ext-light18.psf", "Console font", (s, data) => s.Font = PCScreenFont.LoadFont(data));
 
-        var result = fontGroup.TryLoad();
-
-        result.Switch(
+        fontGroup.TryLoad().Switch(
             some =>
             {
                 KernelConsole.Default!.Font = some.Font;
@@ -56,9 +55,13 @@ public class Kernel : Sys.Kernel
 
         ShellPrint.OkK($"System initialization finished at {DateTime.UtcNow.ToFastString("dd-MM-yyyy HH:mm:ss.fff")}", "init");
         
-        ShellPrint.InfoK("Panicking for fun :)", "init");
+        ShellPrint.InfoK("Testing result panic");
 
-        KernelPanic.Panic("Test panic");
+        RamFS.ReadAllBytes("asdsada/sasda").OrPanic("Testing OrPanic");
+
+        //ShellPrint.InfoK("Panicking for fun :)", "init");
+
+        //KernelPanic.Panic("Test panic");
 
     }
 
