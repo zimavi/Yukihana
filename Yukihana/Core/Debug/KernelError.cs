@@ -34,18 +34,24 @@ public readonly struct KernelError
 
     public static class Codes
     {
-        public const string UNKNOWN         = "unknown";
-        public const string NOT_FOUND       = "not_found";
-        public const string CORRUPTED_DATA  = "corrupted_data";
+        public const string UNKNOWN             = "unknown";
+        public const string NOT_FOUND           = "not_found";
+        public const string CORRUPTED_DATA      = "corrupted_data";
+        public const string PERMISSION_DENIED   = "permission_denied";
+        public const string INVALID_OPERATION   = "invalid_operation";
     }
 
 #endregion
 
 #region Factory methods
 
-    public static KernelError NotFound(string path) => new(Codes.NOT_FOUND, $"Not found: {path}");
+    public static KernelError NotFound(string path) => new(Codes.NOT_FOUND, path);
 
     public static KernelError Corrupted(string description) => new(Codes.CORRUPTED_DATA, description);
+
+    public static KernelError PermissionsDenied(string description) => new(Codes.PERMISSION_DENIED, description);
+
+    public static KernelError InvalidOp(string description) => new(Codes.INVALID_OPERATION, description);
 
 #endregion
 

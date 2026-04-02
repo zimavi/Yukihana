@@ -8,15 +8,14 @@ public sealed class RamFsStream : Stream
     private readonly byte[] _buffer;
     private readonly int _start;
     private readonly int _length;
-
     private int _position;
 
     public RamFsStream(byte[] buffer, int offset, int length)
     {
         ArgumentNullException.ThrowIfNull(buffer);
-        ArgumentOutOfRangeException.ThrowIfLessThan(offset, 0);
-        ArgumentOutOfRangeException.ThrowIfLessThan(length, 0);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(offset, buffer.Length - length);
+
+        if (offset < 0 || length < 0 || offset > buffer.Length - length)
+            throw new ArgumentOutOfRangeException();
 
         _buffer = buffer;
         _start = offset;
@@ -27,15 +26,15 @@ public sealed class RamFsStream : Stream
     public override bool CanRead => true;
     public override bool CanSeek => true;
     public override bool CanWrite => false;
-
     public override long Length => _length;
+
     public override long Position
     {
         get => _position;
         set
         {
-            ArgumentOutOfRangeException.ThrowIfLessThan(0, value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(_length, value);
+            if (value < 0 || value > _length)
+                throw new ArgumentOutOfRangeException(nameof(value));
 
             _position = (int)value;
         }
@@ -43,14 +42,16 @@ public sealed class RamFsStream : Stream
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        ValidateBufferArguments(buffer, offset, count);
+        if (buffer is null)
+            throw new ArgumentNullException(nameof(buffer));
+        if (offset < 0 || count < 0 || offset > buffer.Length - count)
+            throw new ArgumentOutOfRangeException();
 
         int remaining = _length - _position;
         if (remaining <= 0)
             return 0;
-        
-        int toCopy = Math.Min(count, remaining);
 
+        int toCopy = Math.Min(count, remaining);
         Buffer.BlockCopy(_buffer, _start + _position, buffer, offset, toCopy);
         _position += toCopy;
         return toCopy;
@@ -61,12 +62,9 @@ public sealed class RamFsStream : Stream
         int remaining = _length - _position;
         if (remaining <= 0)
             return 0;
-        
+
         int toCopy = Math.Min(buffer.Length, remaining);
-
-        new Span<byte>(_buffer, _start + _position, toCopy)
-            .CopyTo(buffer);
-
+        new ReadOnlySpan<byte>(_buffer, _start + _position, toCopy).CopyTo(buffer);
         _position += toCopy;
         return toCopy;
     }
@@ -82,17 +80,14 @@ public sealed class RamFsStream : Stream
         };
 
         if (newPos < 0 || newPos > _length)
-            throw new IOException("Seek out of bounds");
-        
+            throw new IOException("Seek out of bounds.");
+
         _position = newPos;
         return _position;
     }
 
-    public override void Flush() {}
-
-    public override void SetLength(long value) => throw new NotSupportedException("Read-only stream");
-
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException("Read-only stream");
-
-    public override void Write(ReadOnlySpan<byte> buffer) => throw new NotSupportedException("Read-only stream");
+    public override void Flush() { }
+    public override void SetLength(long value) => throw new NotSupportedException("Read-only stream.");
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException("Read-only stream.");
+    public override void Write(ReadOnlySpan<byte> buffer) => throw new NotSupportedException("Read-only stream.");
 }

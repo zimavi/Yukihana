@@ -16,7 +16,7 @@ public static class ShellPrint
     private const string ERROR_PADDING   = " ERRO ";
     private const string OK_PADDING      = "  OK  ";
 
-    private static readonly char[] SPINNER = ['|', '/', '-', '\\'];
+    private static readonly char[] _spinner = ['|', '/', '-', '\\'];
 
     private const char CLEAR_LINE_CHAR = ' ';
 
@@ -228,7 +228,7 @@ public static class ShellPrint
 
         public ShellTask Tick()
         {
-            _spinnerIndex = (_spinnerIndex + 1) % SPINNER.Length;
+            _spinnerIndex = (_spinnerIndex + 1) % _spinner.Length;
             return this;
         }
 
@@ -272,7 +272,7 @@ public static class ShellPrint
                 if (_progress >= 0)
                     return $"{_progress,3}% ";
 
-                return $"  {SPINNER[_spinnerIndex]}   ";
+                return $"  {_spinner[_spinnerIndex]}   ";
             }
 
             return _state switch

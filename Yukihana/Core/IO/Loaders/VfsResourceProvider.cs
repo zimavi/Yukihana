@@ -2,25 +2,17 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using Yukihana.Core.Extensions.Primitives;
-using Yukihana.Core.IO.Vfs.Backends;
 using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO.Loaders;
 
-public sealed class RamFsResourceProvider : IResourceProvider
+public sealed class VfsResourceProvider : IResourceProvider
 {
-    private readonly RamFs _fs;
-
-    public RamFsResourceProvider(RamFs fs)
-    {
-        _fs = fs;
-    }
-
     public Option<byte[]> TryLoad(string relativePath)
     {
-        if(!_fs.Exists(relativePath))
+        if(!VFS.Exists(relativePath))
             return Option<byte[]>.None();
         
-        return _fs.ReadAllBytes(relativePath).ToOption();
+        return VFS.ReadAllBytes(relativePath).ToOption();
     }
 }

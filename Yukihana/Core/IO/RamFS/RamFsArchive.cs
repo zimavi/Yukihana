@@ -3,6 +3,8 @@
 
 using System.Text;
 using Yukihana.Core.Debug;
+using Yukihana.Core.IO.Vfs;
+using Yukihana.Core.IO.Vfs.Backends;
 using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO.RamFS;
@@ -16,19 +18,20 @@ public static class RamFsArchive
         ShellPrint.InfoK($"archive bytes: {archiveBytes.Length}", "ramfs");
 
         var result = DecompressGZipStoredDeflate(archiveBytes);
-
         if (result.IsFailure)
             return Result<RamFs, KernelError>.Failure(result.Error);
-        
+
         byte[] tarBytes = result.Value;
 
         ShellPrint.InfoK($"tar bytes: {tarBytes.Length}", "ramfs");
 
-        var files = new Dictionary<string, (int Offset, int Length)>(StringComparer.Ordinal);
+        var entries = new Dictionary<string, RamFsEntry>(StringComparer.Ordinal);
         using var flatBlob = new MemoryStream();
 
         int offset = 0;
         int fileCount = 0;
+        int dirCount = 0;
+        int symlinkCount = 0;
 
         while (offset + 512 <= tarBytes.Length)
         {
@@ -39,9 +42,13 @@ public static class RamFsArchive
             }
 
             string name = ReadAsciiString(tarBytes, offset + 0, 100);
-            string prefix = ReadAsciiString(tarBytes, offset + 345, 155);
-            char typeFlag = (char)tarBytes[offset + 156];
+            int mode = (int)ReadOctal(tarBytes, offset + 100, 8);
+            int uid = (int)ReadOctal(tarBytes, offset + 108, 8);
+            int gid = (int)ReadOctal(tarBytes, offset + 116, 8);
             long sizeLong = ReadOctal(tarBytes, offset + 124, 12);
+            char typeFlag = (char)tarBytes[offset + 156];
+            string linkName = ReadAsciiString(tarBytes, offset + 157, 100);
+            string prefix = ReadAsciiString(tarBytes, offset + 347, 155);
 
             if (sizeLong < 0 || sizeLong > int.MaxValue)
                 return Result<RamFs, KernelError>.Failure(KernelError.Corrupted($"File too large for RamFs loader: {sizeLong} bytes"));
@@ -52,10 +59,44 @@ public static class RamFsArchive
 
             offset += 512;
 
+            if (string.IsNullOrEmpty(path))
+            {
+                offset = Align512(offset + size);
+                continue;
+            }
+
+            EnsureParentDirectories(entries, path);
+
             if (typeFlag == '5')
             {
-                ShellPrint.InfoK("directory  : {path}", "ramfs.tar");
-                offset = Align512(offset);
+                var entry = new RamFsEntry(FsNodeKind.Directory)
+                {
+                    Permissions = ParsePermissions(mode, FsNodeKind.Directory),
+                    UserId = uid,
+                    GroupId = gid
+                };
+
+                entries[path] = entry;
+                dirCount++;
+                ShellPrint.InfoK($"directory  : {path} perms={FsPermissionUtil.ToSymbolicString(entry.Permissions)} uid={uid} gid={gid}", "ramfs.tar");
+                offset = Align512(offset + size);
+                continue;
+            }
+
+            if (typeFlag == '2' || typeFlag == '1')
+            {
+                var entry = new RamFsEntry(FsNodeKind.SymbolicLink)
+                {
+                    LinkTarget = FsPath.SanitizeSymlinkTarget(linkName),
+                    Permissions = ParsePermissions(mode, FsNodeKind.SymbolicLink),
+                    UserId = uid,
+                    GroupId = gid
+                };
+
+                entries[path] = entry;
+                symlinkCount++;
+                ShellPrint.InfoK($"symlink    : {path} -> {entry.LinkTarget}", "ramfs.tar");
+                offset = Align512(offset + size);
                 continue;
             }
 
@@ -68,33 +109,94 @@ public static class RamFsArchive
 
             if (offset + size > tarBytes.Length)
                 return Result<RamFs, KernelError>.Failure(KernelError.Corrupted($"TAR entry overruns archive: {path}"));
-            
+
             int blobOffset = (int)flatBlob.Length;
             flatBlob.Write(tarBytes, offset, size);
 
-            files[path] = (blobOffset, size);
-            fileCount++;
+            entries[path] = new RamFsEntry(blobOffset, size)
+            {
+                Permissions = ParsePermissions(mode, FsNodeKind.File),
+                UserId = uid,
+                GroupId = gid
+            };
 
-            ShellPrint.InfoK($"file       : {path} -> offset={blobOffset}, length={size}", "ramfs.tar");
+            fileCount++;
+            ShellPrint.InfoK($"file       : {path} -> offset={blobOffset}, length={size} perms={FsPermissionUtil.ToSymbolicString(entries[path].Permissions)}", "ramfs.tar");
 
             offset = Align512(offset + size);
         }
 
-        ShellPrint.OkK($"files loaded: {fileCount}", "ramfs.tar");
-        return new RamFs(flatBlob.ToArray(), files);
+        return new RamFs(flatBlob.ToArray(), entries);
+    }
+
+    private static FsPermissions ParsePermissions(int mode, FsNodeKind kind)
+    {
+        int bits = mode & 0x1FF;
+
+        if (bits == 0)
+        {
+            bits = kind switch
+            {
+                FsNodeKind.Directory => 755,
+                FsNodeKind.SymbolicLink => 777,
+                _ => 644
+            };
+        }
+
+        return FsPermissionUtil.FromUnixMode(bits);
+    }
+
+    private static void EnsureParentDirectories(Dictionary<string, RamFsEntry> entries, string path)
+    {
+        string parent = FsPath.GetParent(path);
+        if (string.IsNullOrEmpty(parent))
+        {
+            entries[string.Empty] = new RamFsEntry(FsNodeKind.Directory);
+            return;
+        }
+
+        string current = string.Empty;
+        foreach (var segment in FsPath.SplitRelative(parent))
+        {
+            string next = string.IsNullOrEmpty(current) ? segment : current + "/" + segment;
+
+            if (!entries.ContainsKey(next))
+                entries[next] = new RamFsEntry(FsNodeKind.Directory);
+
+            current = next;
+        }
+    }
+
+    private static string Normalize(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        path = path.Replace('\\', '/').Trim();
+
+        while (path.StartsWith("./", StringComparison.Ordinal))
+            path = path[2..];
+
+        while (path.StartsWith("/", StringComparison.Ordinal))
+            path = path[1..];
+
+        while (path.Contains("//", StringComparison.Ordinal))
+            path = path.Replace("//", "/");
+
+        return path;
     }
 
     private static Result<byte[], KernelError> DecompressGZipStoredDeflate(byte[] gzipBytes)
     {
         if (gzipBytes.Length < 18)
             throw new ArgumentException("Input is too short to be a valid gzip stream.");
-        
-        if (gzipBytes[0] != 0x1F | gzipBytes[1] != 0x8B)
+
+        if (gzipBytes[0] != 0x1F || gzipBytes[1] != 0x8B)
             throw new ArgumentException("Invalid gzip magic.");
-        
+
         if (gzipBytes[2] != 8)
-            throw new ArgumentException("Usupported gzip compression method.");
-        
+            throw new ArgumentException("Unsupported gzip compression method.");
+
         int flags = gzipBytes[3];
         int pos = 10;
 
@@ -102,7 +204,7 @@ public static class RamFsArchive
         {
             if (pos + 2 > gzipBytes.Length)
                 return Result<byte[], KernelError>.Failure(KernelError.Corrupted("Corrupt gzip extra field."));
-            
+
             int xlen = gzipBytes[pos] | (gzipBytes[pos + 1] << 8);
             pos += 2 + xlen;
         }
@@ -119,7 +221,7 @@ public static class RamFsArchive
         int footerPos = gzipBytes.Length - 8;
         if (footerPos <= pos)
             return Result<byte[], KernelError>.Failure(KernelError.Corrupted("Corrupt gzip stream."));
-        
+
         ShellPrint.InfoK($"deflate payload begins at {pos}, footer at {footerPos}", "ramfs.gzip");
 
         var reader = new BitReader(gzipBytes, pos, footerPos);
@@ -132,16 +234,16 @@ public static class RamFsArchive
             int blockType = reader.ReadBits(2);
 
             if (blockType != 0)
-                return Result<byte[], KernelError>.Failure(KernelError.Corrupted("This loader currently only supports only stored DEFLATE blocks."));
-            
+                return Result<byte[], KernelError>.Failure(KernelError.Corrupted("This loader currently only supports stored DEFLATE blocks."));
+
             reader.AlignToByte();
 
             ushort len = (ushort)reader.ReadBits(16);
             ushort nlen = (ushort)reader.ReadBits(16);
 
-            if((ushort)~len != nlen)
+            if ((ushort)~len != nlen)
                 return Result<byte[], KernelError>.Failure(KernelError.Corrupted("Stored DEFLATE block length check failed."));
-            
+
             reader.CopyBytesTo(output, len);
 
             ShellPrint.InfoK($"stored block: {len} bytes, final={finalBlock}", "ramfs.gzip");
@@ -154,11 +256,11 @@ public static class RamFsArchive
 
         if (expectedSize != (uint)result.Length)
             return Result<byte[], KernelError>.Failure(KernelError.Corrupted($"GZip size footer mismatch. Expected {expectedSize}, got {result.Length}."));
-        
+
         uint actualCrc = Crc32(result);
         if (actualCrc != expectedCrc)
             return Result<byte[], KernelError>.Failure(KernelError.Corrupted($"GZip CRC mismatch. Expected 0x{expectedCrc:X8}, got 0x{actualCrc:X8}."));
-        
+
         ShellPrint.OkK($"crc ok: 0x{actualCrc:X8}", "ramfs.gzip");
         return result;
     }
@@ -224,25 +326,6 @@ public static class RamFsArchive
     }
 
     private static int Align512(int value) => (value + 511) & ~511;
-
-    private static string Normalize(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return string.Empty;
-
-        path = path.Replace('\\', '/').Trim();
-
-        while (path.StartsWith("./", StringComparison.Ordinal))
-            path = path[2..];
-
-        while (path.StartsWith("/", StringComparison.Ordinal))
-            path = path[1..];
-
-        while (path.Contains("//", StringComparison.Ordinal))
-            path = path.Replace("//", "/");
-
-        return path;
-    }
 
     private static uint ReadUInt32LE(byte[] data, int offset)
     {

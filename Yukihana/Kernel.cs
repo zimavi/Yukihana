@@ -9,6 +9,7 @@ using Yukihana.Core.IO;
 using Yukihana.Core.IO.Loaders;
 using Yukihana.Core.IO.Loaders.Optional;
 using Yukihana.Core.IO.RamFS;
+using Yukihana.Core.IO.Vfs.Backends;
 using Yukihana.Core.Resources;
 using Sys = Cosmos.Kernel.System;
 
@@ -16,7 +17,7 @@ namespace Yukihana;
 
 public class Kernel : Sys.Kernel
 {
-    public static RamFs RamFS { get; private set; } = null!;
+    private static RamFs _initRamFs = null!;
     
     public static bool SpeedrunShutdown { get; set; } = false;
 
@@ -28,20 +29,33 @@ public class Kernel : Sys.Kernel
 
         Logger.ReportLevel = LogLevel.Trace;
 
-        var ramfsTask = ShellPrint.CreateTask("Initializing...", "ramfs").Progress(0).Work().Display();
+        var ramfsTask = ShellPrint.CreateTask("Loading initramfs", "init").Progress(0).Work().Display();
 
-        RamFS = RamFs.FromArchive(RamFsData.Data).OrPanic("RamFS was not initialized");
+        _initRamFs = RamFs.FromArchive(RamFsData.Data).OrPanic("RamFS was not initialized");
 
         ramfsTask.Ok().Display();
+
+        ShellPrint.InfoK("Initializing VFs...", "init");
+
+        ShellPrint.InfoK("Mounting initramfs as root", "init");
+
+        VFS.Mount("/", _initRamFs);
+        VFS.Mount("/tmp", new TempFs());
+        VFS.Mount("/var", new TempFs());
+        VFS.Mount("/proc", new TempFs());
+        VFS.Mount("/sys", new TempFs());
+
+        VFS.Mount("/usr", new OverlayFs(new SubtreeFs(_initRamFs, "usr"), new TempFs()));
+        VFS.Mount("/etc", new OverlayFs(new SubtreeFs(_initRamFs, "etc"), new TempFs()));
 
         var fontGroup = new OptionalResourceGroup<FontState>(
             "Fonts",
             () => new FontState(),
             state => {},
-            new RamFsResourceProvider(RamFS)
+            new VfsResourceProvider()
         );
 
-        fontGroup.Add("fonts/zap-ext-light18.psf", "Console font", (s, data) => s.Font = PCScreenFont.LoadFont(data));
+        fontGroup.Add("/usr/share/fonts/zap-ext-light18.psf", "Console font", (s, data) => s.Font = PCScreenFont.LoadFont(data));
 
         fontGroup.TryLoad().Switch(
             some =>
@@ -53,6 +67,12 @@ public class Kernel : Sys.Kernel
         );
 
         ShellPrint.OkK($"System initialization finished at {DateTime.UtcNow:dd-MM-yyyy HH:mm:ss.fff}", "init");
+
+        ShellPrint.InfoK($"Testing VFS reading", "init");
+
+        var str = VFS.ReadAllText("/test.txt").OrPanic("Could not read file").Trim();
+
+        ShellPrint.InfoK($"/test.txt -> '{str}'", "init");
         
         ShellPrint.InfoK("Panicking for fun :)", "init");
 
