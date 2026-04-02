@@ -29,7 +29,7 @@ public struct LogEntry
     public LogLevel Level;
     public LogOrigin Origin;
     public string Log;
-    //public DateTime Date;
+    public DateTime Date;
 
     public string CallerMemberName;
     public string CallerFilePath;
@@ -39,7 +39,7 @@ public struct LogEntry
         LogLevel level, 
         LogOrigin origin, 
         string log, 
-        //DateTime date,
+        DateTime date,
         string callerMemberName = "",
         string callerFilePath = "",
         int callerLineNumber = 0)
@@ -47,7 +47,7 @@ public struct LogEntry
         Level = level;
         Origin = origin;
         Log = log;
-        //Date = date;
+        Date = date;
         CallerMemberName = callerMemberName ?? string.Empty;
         CallerFilePath = callerFilePath ?? string.Empty;
         CallerLineNumber = callerLineNumber;
@@ -71,11 +71,11 @@ public struct LogEntry
         return this;
     }
 
-    //public LogEntry WithDate(DateTime date)
-    //{
-    //    Date = date;
-    //    return this;
-    //}
+    public LogEntry WithDate(DateTime date)
+    {
+        Date = date;
+        return this;
+    }
 
     public LogEntry WithCaller(string memberName, string filePath, int lineNumber)
     {
@@ -95,7 +95,7 @@ public struct LogEntry
 
     public override string ToString()
     {
-        //var timestamp = Date.ToString("yyyy-MM-dd HH:mm:ss.fff");
+        var timestamp = Date.ToString("yyyy-MM-dd HH:mm:ss.fff");
         var caller = HasCallerInfo
             ? $" ({CallerMemberName}"
               + (string.IsNullOrEmpty(CallerFileName) ? "" : $" in {Path.GetFileName(CallerFileName)}")
@@ -103,8 +103,8 @@ public struct LogEntry
               + ")"
             : string.Empty;
         
-        //return $"[{timestamp}] [{Origin}] [{Level}] {Log}{caller}";
-        return $"[{Origin}] [{Level}] {Log}{caller}";
+        return $"[{timestamp}] [{Origin}] [{Level}] {Log}{caller}";
+        //return $"[{Origin}] [{Level}] {Log}{caller}";
     }
 }
 
@@ -134,7 +134,7 @@ public static class Logger
             level,
             origin,
             log,
-            //DateTime.Now,
+            DateTime.Now,
             callerMemberName,
             callerFilePath,
             callerLineNumber);

@@ -5,7 +5,6 @@ using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Yukihana.Core.Debug;
 using Yukihana.Core.Extensions.Primitives;
-using Yukihana.Core.Extensions.System;
 using Yukihana.Core.IO;
 using Yukihana.Core.IO.Loaders;
 using Yukihana.Core.IO.Loaders.Optional;
@@ -53,15 +52,11 @@ public class Kernel : Sys.Kernel
             () => {}
         );
 
-        ShellPrint.OkK($"System initialization finished at {DateTime.UtcNow.ToFastString("dd-MM-yyyy HH:mm:ss.fff")}", "init");
+        ShellPrint.OkK($"System initialization finished at {DateTime.UtcNow:dd-MM-yyyy HH:mm:ss.fff}", "init");
         
-        ShellPrint.InfoK("Testing result panic");
+        ShellPrint.InfoK("Panicking for fun :)", "init");
 
-        RamFS.ReadAllBytes("asdsada/sasda").OrPanic("Testing OrPanic");
-
-        //ShellPrint.InfoK("Panicking for fun :)", "init");
-
-        //KernelPanic.Panic("Test panic");
+        KernelPanic.Panic("Test panic");
 
     }
 
