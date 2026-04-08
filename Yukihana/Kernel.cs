@@ -93,7 +93,7 @@ public class Kernel : Sys.Kernel
             string content = Encoding.UTF8.GetString(buffer);
             ShellPrint.InfoK($"/tmp/test.txt -> '{content}'", "init");
         }
-        
+
         ShellPrint.InfoK("Panicking for fun :)", "init");
         KernelPanic.Panic("Test panic");
     }

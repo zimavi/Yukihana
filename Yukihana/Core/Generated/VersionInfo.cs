@@ -12,5 +12,5 @@ public static class VersionInfo
 
     public const string OS_NAME = "Yukihana";
     public const string OS_VERSION = "2.0.1";
-    public const string OS_REVISION = "rev-202604081854";
+    public const string OS_REVISION = "rev-202604081959";
 }
