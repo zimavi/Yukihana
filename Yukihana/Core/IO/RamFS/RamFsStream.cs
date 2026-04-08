@@ -5,89 +5,175 @@ namespace Yukihana.Core.IO.RamFS;
 
 public sealed class RamFsStream : Stream
 {
-    private readonly byte[] _buffer;
-    private readonly int _start;
-    private readonly int _length;
-    private int _position;
+    private readonly IRamFsStreamBacking _backing;
+    private readonly FileAccess _access;
+    private readonly FileShare _share;
+    private long _position;
+    private bool _disposed;
 
-    public RamFsStream(byte[] buffer, int offset, int length)
+    public RamFsStream(IRamFsStreamBacking backing, FileAccess access, FileShare share = FileShare.Read, long initialPosition = 0)
     {
-        ArgumentNullException.ThrowIfNull(buffer);
+        _backing = backing ?? throw new ArgumentNullException(nameof(backing));
+        _access = access;
+        _share = share;
 
-        if (offset < 0 || length < 0 || offset > buffer.Length - length)
-            throw new ArgumentOutOfRangeException();
+        if (initialPosition < 0)
+            throw new ArgumentOutOfRangeException(nameof(initialPosition));
 
-        _buffer = buffer;
-        _start = offset;
-        _length = length;
-        _position = 0;
+        if (initialPosition > backing.Length)
+            initialPosition = backing.Length;
+
+        _position = initialPosition;
     }
 
-    public override bool CanRead => true;
-    public override bool CanSeek => true;
-    public override bool CanWrite => false;
-    public override long Length => _length;
+    public FileShare Share => _share;
+
+    public override bool CanRead => !_disposed && ((_access & FileAccess.Read) != 0) && _backing.CanRead;
+    public override bool CanWrite => !_disposed && ((_access & FileAccess.Write) != 0) && _backing.CanWrite;
+    public override bool CanSeek => !_disposed && _backing.CanSeek;
+    public override long Length
+    {
+        get
+        {
+            EnsureNotDisposed();
+            return _backing.Length;
+        }
+    }
 
     public override long Position
     {
-        get => _position;
+        get
+        {
+            EnsureNotDisposed();
+            return _position;
+        }
         set
         {
-            if (value < 0 || value > _length)
+            EnsureNotDisposed();
+
+            if (!CanSeek)
+                throw new NotSupportedException("Seek is not supported.");
+
+            if (value < 0)
                 throw new ArgumentOutOfRangeException(nameof(value));
 
-            _position = (int)value;
+            _position = value > _backing.Length ? _backing.Length : value;
         }
+    }
+
+    public override void Flush()
+    {
+        EnsureNotDisposed();
+        _backing.Flush();
     }
 
     public override int Read(byte[] buffer, int offset, int count)
     {
+        EnsureNotDisposed();
+
+        if (!CanRead)
+            throw new NotSupportedException("Read is not supported.");
+
         if (buffer is null)
             throw new ArgumentNullException(nameof(buffer));
         if (offset < 0 || count < 0 || offset > buffer.Length - count)
             throw new ArgumentOutOfRangeException();
 
-        int remaining = _length - _position;
-        if (remaining <= 0)
-            return 0;
-
-        int toCopy = Math.Min(count, remaining);
-        Buffer.BlockCopy(_buffer, _start + _position, buffer, offset, toCopy);
-        _position += toCopy;
-        return toCopy;
+        int read = Read(new Span<byte>(buffer, offset, count));
+        return read;
     }
 
     public override int Read(Span<byte> buffer)
     {
-        int remaining = _length - _position;
-        if (remaining <= 0)
-            return 0;
+        EnsureNotDisposed();
 
-        int toCopy = Math.Min(buffer.Length, remaining);
-        new ReadOnlySpan<byte>(_buffer, _start + _position, toCopy).CopyTo(buffer);
-        _position += toCopy;
-        return toCopy;
+        if (!CanRead)
+            throw new NotSupportedException("Read is not supported.");
+
+        int read = _backing.Read(_position, buffer);
+        _position += read;
+        return read;
     }
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        int newPos = origin switch
+        EnsureNotDisposed();
+
+        if (!CanSeek)
+            throw new NotSupportedException("Seek is not supported.");
+
+        long newPos = origin switch
         {
-            SeekOrigin.Begin => (int)offset,
-            SeekOrigin.Current => _position + (int)offset,
-            SeekOrigin.End => _length + (int)offset,
-            _ => throw new ArgumentException(nameof(origin))
+            SeekOrigin.Begin => offset,
+            SeekOrigin.Current => _position + offset,
+            SeekOrigin.End => _backing.Length + offset,
+            _ => throw new ArgumentOutOfRangeException(nameof(origin))
         };
 
-        if (newPos < 0 || newPos > _length)
-            throw new IOException("Seek out of bounds.");
+        if (newPos < 0)
+            throw new IOException("Seek before beginning of stream.");
 
-        _position = newPos;
+        _position = newPos > _backing.Length ? _backing.Length : newPos;
         return _position;
     }
 
-    public override void Flush() { }
-    public override void SetLength(long value) => throw new NotSupportedException("Read-only stream.");
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException("Read-only stream.");
-    public override void Write(ReadOnlySpan<byte> buffer) => throw new NotSupportedException("Read-only stream.");
+    public override void SetLength(long value)
+    {
+        EnsureNotDisposed();
+
+        if (!CanWrite)
+            throw new NotSupportedException("SetLength is not supported.");
+
+        if (value < 0)
+            throw new ArgumentOutOfRangeException(nameof(value));
+
+        _backing.SetLength(value);
+        if (_position > value)
+            _position = value;
+    }
+
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        EnsureNotDisposed();
+
+        if (!CanWrite)
+            throw new NotSupportedException("Write is not supported.");
+
+        if (buffer is null)
+            throw new ArgumentNullException(nameof(buffer));
+        if (offset < 0 || count < 0 || offset > buffer.Length - count)
+            throw new ArgumentOutOfRangeException();
+
+        Write(new ReadOnlySpan<byte>(buffer, offset, count));
+    }
+
+    public override void Write(ReadOnlySpan<byte> buffer)
+    {
+        EnsureNotDisposed();
+
+        if (!CanWrite)
+            throw new NotSupportedException("Write is not supported.");
+
+        _backing.Write(_position, buffer);
+        _position += buffer.Length;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+                _backing.Flush();
+
+            _disposed = true;
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private void EnsureNotDisposed()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(RamFsStream));
+    }
 }

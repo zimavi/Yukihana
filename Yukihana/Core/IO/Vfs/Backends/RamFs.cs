@@ -10,6 +10,51 @@ namespace Yukihana.Core.IO.Vfs.Backends;
 
 public sealed class RamFs : IVfsBackend
 {
+    private sealed class ReadOnlySliceBacking : IRamFsStreamBacking
+    {
+        private readonly byte[] _buffer;
+        private readonly int _offset;
+        private readonly int _length;
+
+        public ReadOnlySliceBacking(byte[] buffer, int offset, int length)
+        {
+            ArgumentNullException.ThrowIfNull(buffer);
+
+            if (offset < 0 || length < 0 || offset > buffer.Length - length)
+                throw new ArgumentOutOfRangeException();
+
+            _buffer = buffer;
+            _offset = offset;
+            _length = length;
+        }
+
+        public long Length => _length;
+        public bool CanRead => true;
+        public bool CanWrite => false;
+        public bool CanSeek => true;
+
+        public int Read(long position, Span<byte> buffer)
+        {
+            if (position < 0 || position > _length)
+                throw new ArgumentOutOfRangeException(nameof(position));
+
+            int remaining = _length - (int)position;
+            if (remaining <= 0 || buffer.Length == 0)
+                return 0;
+
+            int toCopy = Math.Min(remaining, buffer.Length);
+            new ReadOnlySpan<byte>(_buffer, _offset + (int)position, toCopy).CopyTo(buffer);
+            return toCopy;
+        }
+
+        public void Write(long position, ReadOnlySpan<byte> buffer)
+            => throw new NotSupportedException("Read-only stream.");
+
+        public void SetLength(long length)
+            => throw new NotSupportedException("Read-only stream.");
+
+        public void Flush() { }
+    }
     private readonly byte[] _blob;
     private readonly Dictionary<string, RamFsEntry> _entries;
     private readonly Dictionary<string, (int Offset, int Length)> _files;
@@ -120,17 +165,27 @@ public sealed class RamFs : IVfsBackend
         return ReadAllBytes(path).Map(bytes => encoding.GetString(bytes));
     }
 
-    public Result<Stream, KernelError> Open(string path)
+    public Result<Stream, KernelError> Open(
+        string path,
+        FileMode mode = FileMode.Open,
+        FileAccess access = FileAccess.Read,
+        FileShare share = FileShare.Read)
     {
         path = FsPath.NormalizeRelative(path);
+
+        if ((access & FileAccess.Write) != 0)
+            return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Read-only filesystem: {path}"));
+
+        if (mode != FileMode.Open)
+            return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Read-only filesystem: {path}"));
 
         if (!_entries.TryGetValue(path, out var entry))
             return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
 
         if (entry.Kind != FsNodeKind.File)
-            return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Path is not a regular file: {path}"));
+            return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a regular file: {path}"));
 
-        return new RamFsStream(_blob, entry.Offset, entry.Length);
+        return new RamFsStream(new ReadOnlySliceBacking(_blob, entry.Offset, entry.Length), access, share);
     }
 
     public Option<KernelError> WriteAllBytes(string path, byte[] data)

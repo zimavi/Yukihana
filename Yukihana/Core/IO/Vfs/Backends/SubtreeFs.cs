@@ -49,8 +49,12 @@ public sealed class SubtreeFs : IVfsBackend
     public Result<string, KernelError> ReadAllText(string path, Encoding? encoding = null)
         => _inner.ReadAllText(Map(path), encoding);
 
-    public Result<Stream, KernelError> Open(string path)
-        => _inner.Open(Map(path));
+    public Result<Stream, KernelError> Open(
+        string path,
+        FileMode mode = FileMode.Open,
+        FileAccess access = FileAccess.Read,
+        FileShare share = FileShare.Read)
+        => _inner.Open(Map(path), mode, access, share);
 
     public Option<KernelError> WriteAllBytes(string path, byte[] data)
         => Option<KernelError>.Some(KernelError.PermissionsDenied("Lower FS is read-only"));

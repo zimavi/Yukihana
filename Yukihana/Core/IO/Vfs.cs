@@ -140,24 +140,81 @@ public static class VFS
         return ReadAllBytes(path).Map(bytes => encoding.GetString(bytes));
     }
 
-    public static Result<Stream, KernelError> Open(string path)
+    public static Result<Stream, KernelError> Open(
+        string path,
+        FileMode mode = FileMode.Open,
+        FileAccess access = FileAccess.Read,
+        FileShare share = FileShare.Read)
     {
-        var resolved = ResolvePath(path, followFinalSymlink: true);
-        if (resolved.IsFailure)
-            return Result<Stream, KernelError>.Failure(resolved.Error);
+        string absolute = ToAbsolute(path);
 
-        if (resolved.Value.Kind != FsNodeKind.File)
-            return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
-        
-        var metadata = resolved.Value.Metadata;
+        if (mode == FileMode.Append && (access & FileAccess.Write) == 0)
+            return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Append requires write access: {absolute}"));
 
-        if (!FsPermissionUtil.CanRead(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
+        var resolved = ResolvePath(absolute, followFinalSymlink: true);
+
+        if (!resolved.IsFailure && resolved.Value.Kind == FsNodeKind.Directory)
+            return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Path is a directory: {absolute}"));
+
+        if (!resolved.IsFailure && resolved.Value.Kind != FsNodeKind.Missing)
         {
-            ShellPrint.WarnK($"permission_denied: open {resolved.Value.AbsolutePath}", "vfs.perm");
-            return Result<Stream, KernelError>.Failure(KernelError.PermissionsDenied($"open {resolved.Value.AbsolutePath}"));
+            if (!CanOpenExisting(resolved.Value.Metadata, access, mode, resolved.Value.AbsolutePath))
+                return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Permission denied: {resolved.Value.AbsolutePath}"));
+
+            return resolved.Value.Mount.Backend.Open(resolved.Value.RelativePath, mode, access, share);
         }
 
-        return resolved.Value.Mount.Backend.Open(resolved.Value.RelativePath);
+        if (mode is FileMode.Open or FileMode.Truncate)
+            return Result<Stream, KernelError>.Failure(KernelError.NotFound(absolute));
+
+        string parentAbsolute = FsPath.GetParent(absolute);
+        var parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
+
+        if (parentResolved.IsFailure)
+            return Result<Stream, KernelError>.Failure(parentResolved.Error);
+
+        if (parentResolved.Value.Kind != FsNodeKind.Directory)
+            return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Parent is not a directory: {parentAbsolute}"));
+
+        if (!FsPermissionUtil.CanAccess(
+                parentResolved.Value.Metadata.Permissions,
+                FsAccess.Write | FsAccess.Execute,
+                CurrentCredentials,
+                parentResolved.Value.Metadata.UserId,
+                parentResolved.Value.Metadata.GroupId))
+        {
+            ShellPrint.WarnK($"permission denied: create in {parentResolved.Value.AbsolutePath}", "vfs.perm");
+            return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Permission denied: {parentResolved.Value.AbsolutePath}"));
+        }
+
+        string leaf = FsPath.GetFileName(absolute);
+        string rel = string.IsNullOrEmpty(parentResolved.Value.RelativePath)
+            ? leaf
+            : parentResolved.Value.RelativePath + "/" + leaf;
+
+        return parentResolved.Value.Mount.Backend.Open(rel, mode, access, share);
+    }
+
+    private static bool CanOpenExisting(VfsMetadata metadata, FileAccess access, FileMode mode, string path)
+    {
+        if (metadata.Kind == FsNodeKind.Missing)
+            return false;
+
+        if ((access & FileAccess.Read) != 0 &&
+            !FsPermissionUtil.CanRead(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
+            return false;
+
+        if ((access & FileAccess.Write) != 0 &&
+            !FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
+            return false;
+
+        if (mode == FileMode.Truncate && (access & FileAccess.Write) == 0)
+            return false;
+
+        if (mode == FileMode.Append && (access & FileAccess.Write) == 0)
+            return false;
+
+        return true;
     }
 
     public static Option<KernelError> WriteAllBytes(string path, byte[] data)

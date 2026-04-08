@@ -99,15 +99,63 @@ public sealed class OverlayFs : IVfsBackend
         return ReadAllBytes(path).Map(bytes => encoding.GetString(bytes));
     }
 
-    public Result<Stream, KernelError> Open(string path)
+    public Result<Stream, KernelError> Open(
+        string path,
+        FileMode mode = FileMode.Open,
+        FileAccess access = FileAccess.Read,
+        FileShare share = FileShare.Read)
     {
         path = Normalize(path);
 
-        if (!TryResolveEffectiveFile(path, out var backend, out var relativePath))
+        ShellPrint.InfoK($"open request: {path} mode={mode} access={access}", "overlay.open");
+
+        bool wantsWrite = (access & FileAccess.Write) != 0;
+        bool createLike = mode is FileMode.Create or FileMode.CreateNew or FileMode.OpenOrCreate or FileMode.Append;
+        bool truncateLike = mode == FileMode.Truncate;
+
+        if (IsHiddenByWhiteout(path))
             return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
 
-        ShellPrint.InfoK($"open file: {path}", "overlay.open");
-        return backend.Open(relativePath);
+        if (TryGetUpperMetadata(path, out var upperMeta))
+        {
+            if (upperMeta.Kind == FsNodeKind.Directory)
+                return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is a directory: {path}"));
+
+            return _upper.Open(path, mode, access, share);
+        }
+
+        if (TryGetLowerMetadata(path, out var lowerMeta))
+        {
+            if (lowerMeta.Kind == FsNodeKind.Directory)
+                return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is a directory: {path}"));
+
+            if (mode == FileMode.CreateNew)
+                return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"File already exists: {path}"));
+
+            if (wantsWrite || createLike || truncateLike)
+            {
+                var copyUp = CopyUpNode(path, lowerMeta.Kind);
+                if (copyUp.IsSome)
+                    return Result<Stream, KernelError>.Failure(copyUp.Value);
+
+                if (lowerMeta.Kind == FsNodeKind.File && _lower.TryGetMetadata(path, out var meta))
+                {
+                    // preserve lower permissions on copy-up
+                    var chmod = _upper.SetPermissions(path, meta.Permissions);
+                    if (chmod.IsSome)
+                        return Result<Stream, KernelError>.Failure(chmod.Value);
+                }
+
+                return _upper.Open(path, mode, access, share);
+            }
+
+            return _lower.Open(path, mode, access, share);
+        }
+
+        if (mode == FileMode.Open || mode == FileMode.Truncate)
+            return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
+
+        return _upper.Open(path, mode, access, share);
     }
 
     public Option<KernelError> WriteAllBytes(string path, byte[] data)

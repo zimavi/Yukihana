@@ -16,7 +16,12 @@ public interface IVfsBackend
 
     Result<byte[], KernelError> ReadAllBytes(string path);
     Result<string, KernelError> ReadAllText(string path, Encoding? encoding = null);
-    Result<Stream, KernelError> Open(string path);
+
+    Result<Stream, KernelError> Open(
+        string path,
+        FileMode mode = FileMode.Open,
+        FileAccess access = FileAccess.Read,
+        FileShare share = FileShare.Read);
 
 
     Option<KernelError> WriteAllBytes(string path, byte[] data);

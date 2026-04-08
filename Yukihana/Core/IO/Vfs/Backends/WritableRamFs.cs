@@ -32,6 +32,78 @@ public sealed class TempFs : IVfsBackend
         }
     }
 
+    private sealed class NodeBacking : IRamFsStreamBacking
+    {
+        private readonly Node _node;
+
+        public NodeBacking(Node node)
+        {
+            _node = node;
+        }
+
+        public long Length => _node.Data?.LongLength ?? 0;
+        public bool CanRead => true;
+        public bool CanWrite => true;
+        public bool CanSeek => true;
+
+        public int Read(long position, Span<byte> buffer)
+        {
+            byte[] data = _node.Data ?? Array.Empty<byte>();
+
+            if (position < 0 || position > data.LongLength)
+                throw new ArgumentOutOfRangeException(nameof(position));
+
+            int remaining = data.Length - (int)position;
+            if (remaining <= 0 || buffer.Length == 0)
+                return 0;
+
+            int toCopy = Math.Min(remaining, buffer.Length);
+            new ReadOnlySpan<byte>(data, (int)position, toCopy).CopyTo(buffer);
+            return toCopy;
+        }
+
+        public void Write(long position, ReadOnlySpan<byte> buffer)
+        {
+            if (position < 0)
+                throw new ArgumentOutOfRangeException(nameof(position));
+
+            long required = position + buffer.Length;
+            if (required > int.MaxValue)
+                throw new IOException("File too large.");
+
+            byte[] data = _node.Data ?? Array.Empty<byte>();
+            if (required > data.Length)
+            {
+                var grown = new byte[(int)required];
+                if (data.Length != 0)
+                    Buffer.BlockCopy(data, 0, grown, 0, data.Length);
+                data = grown;
+            }
+
+            buffer.CopyTo(new Span<byte>(data, (int)position, buffer.Length));
+            _node.Data = data;
+        }
+
+        public void SetLength(long length)
+        {
+            if (length < 0)
+                throw new ArgumentOutOfRangeException(nameof(length));
+            if (length > int.MaxValue)
+                throw new IOException("File too large.");
+
+            byte[] data = _node.Data ?? Array.Empty<byte>();
+            if (data.Length == length)
+                return;
+
+            var resized = new byte[(int)length];
+            Buffer.BlockCopy(data, 0, resized, 0, Math.Min(data.Length, resized.Length));
+            _node.Data = resized;
+        }
+
+        public void Flush() { }
+    }
+
+
     private readonly Node _root = new(FsNodeKind.Directory);
 
     public bool Exists(string path)
@@ -105,18 +177,109 @@ public sealed class TempFs : IVfsBackend
         return ReadAllBytes(path).Map(bytes => encoding.GetString(bytes));
     }
 
-    public Result<Stream, KernelError> Open(string path)
+    public Result<Stream, KernelError> Open(
+        string path,
+        FileMode mode = FileMode.Open,
+        FileAccess access = FileAccess.Read,
+        FileShare share = FileShare.Read)
     {
         path = FsPath.NormalizeRelative(path);
 
+        if (string.IsNullOrEmpty(path))
+            return Result<Stream, KernelError>.Failure(KernelError.Corrupted("Cannot open the root directory as a file."));
+
+        bool needsWrite = (access & FileAccess.Write) != 0;
+        bool createMissing = mode is FileMode.Create or FileMode.CreateNew or FileMode.OpenOrCreate or FileMode.Append;
+        bool truncateExisting = mode is FileMode.Create or FileMode.Truncate;
+        bool append = mode == FileMode.Append;
+
+        if (append && !needsWrite)
+            return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Append requires write access: {path}"));
+
+        var parentPath = FsPath.GetParent(path);
+        if (createMissing || truncateExisting || append || mode == FileMode.CreateNew)
+        {
+            var ensure = TryEnsureDirectory(parentPath, recursive: true, out var dirError);
+            if (!ensure)
+                return Result<Stream, KernelError>.Failure(dirError);
+        }
+
         var node = FindExactNode(path);
+
+        switch (mode)
+        {
+            case FileMode.Open:
+                if (node is null)
+                    return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
+                break;
+
+            case FileMode.CreateNew:
+                if (node is not null)
+                    return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"File already exists: {path}"));
+                node = CreateFileNode(path);
+                break;
+
+            case FileMode.Create:
+                if (node is null)
+                    node = CreateFileNode(path);
+                else
+                {
+                    if (node.Kind != FsNodeKind.File)
+                        return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a file: {path}"));
+                    node.Data = Array.Empty<byte>();
+                }
+                break;
+
+            case FileMode.OpenOrCreate:
+                if (node is null)
+                    node = CreateFileNode(path);
+                break;
+
+            case FileMode.Truncate:
+                if (node is null)
+                    return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
+                if (node.Kind != FsNodeKind.File)
+                    return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a file: {path}"));
+                node.Data = Array.Empty<byte>();
+                break;
+
+            case FileMode.Append:
+                if (node is null)
+                    node = CreateFileNode(path);
+                break;
+
+            default:
+                return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Unsupported file mode: {mode}"));
+        }
+
         if (node is null)
             return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
 
         if (node.Kind != FsNodeKind.File)
-            return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Path is not a regular file: {path}"));
+            return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a regular file: {path}"));
 
-        return new RamFsStream(node.Data ?? Array.Empty<byte>(), 0, (node.Data ?? Array.Empty<byte>()).Length);
+        if (needsWrite && mode == FileMode.Open && node.Data is null)
+        {
+            // Still okay. Opening with write is allowed on writable backend.
+        }
+
+        long initialPosition = append ? (node.Data?.LongLength ?? 0) : 0;
+        var stream = new RamFsStream(new NodeBacking(node), access, share, initialPosition);
+        return stream;
+    }
+
+    private Node CreateFileNode(string path)
+    {
+        string parentPath = FsPath.GetParent(path);
+        var parent = FindExactNode(parentPath);
+
+        if (parent is null || parent.Kind != FsNodeKind.Directory)
+            throw new DirectoryNotFoundException(parentPath);
+
+        string name = FsPath.GetFileName(path);
+        var node = new Node(FsNodeKind.File);
+        parent.Children[name] = node;
+        return node;
     }
 
     public Option<KernelError> WriteAllBytes(string path, byte[] data)
@@ -134,7 +297,7 @@ public sealed class TempFs : IVfsBackend
         if (parent is null || parent.Kind != FsNodeKind.Directory)
             return Option<KernelError>.Some(KernelError.NotFound(FsPath.GetParent(path)));
 
-        if ((parent.Children.TryGetValue(name, out var existing) is bool exists) && existing.Kind == FsNodeKind.Directory)
+        if ((parent.Children.TryGetValue(name, out var existing) is bool exists) && existing!.Kind == FsNodeKind.Directory)
             return Option<KernelError>.Some(KernelError.InvalidOp($"Cannot overwrite directory with file: {path}"));
 
         var copy = new byte[data.Length];
@@ -143,7 +306,7 @@ public sealed class TempFs : IVfsBackend
         parent.Children[name] = new Node(FsNodeKind.File)
         {
             Data = copy,
-            Permissions = exists ? existing.Permissions : FsPermissionUtil.DefaultFile
+            Permissions = exists ? existing!.Permissions : FsPermissionUtil.DefaultFile
         };
 
         return Option<KernelError>.None();
