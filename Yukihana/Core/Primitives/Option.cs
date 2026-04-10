@@ -10,7 +10,7 @@ namespace Yukihana.Core.Primitives;
 /// or <c>None</c> representing the absence of a value.
 /// </summary>
 /// <typeparam name="T">The type of contained value.</typeparam>
-public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>
+public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDisposable
 {
 #region Properties & fields
     private readonly T? _value;
@@ -53,6 +53,22 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>
     public static Option<T> None() => new(default, false);
 
     public static Option<T> From(T? value) => value is null ? None() : Some(value);
+
+#endregion
+
+#region IDisposable
+
+    public void Dispose()
+    {
+        if (IsSome)
+            DisposeIfNeeded(_value);
+    }
+
+    private static void DisposeIfNeeded(T? value)
+    {
+        if (value is IDisposable disposable)
+            disposable.Dispose();
+    }
 
 #endregion
 

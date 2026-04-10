@@ -233,12 +233,42 @@ public static partial class VFS
             return Result<string[], KernelError>.Failure(KernelError.InvalidOp($"Path is not a directory: {path}"));
         
         var metadata = resolved.Value.Metadata;
-        if (!FsPermissionUtil.CanRead(resolved.Value.Metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
+        if (!FsPermissionUtil.CanRead(
+            resolved.Value.Metadata.Permissions, 
+            CurrentCredentials, 
+            metadata.UserId, 
+            metadata.GroupId))
         {
             ShellPrint.WarnK($"permission denied: read {resolved.Value.AbsolutePath}", "vfs.perm");
             return Result<string[], KernelError>.Failure(KernelError.PermissionsDenied($"read {resolved.Value.AbsolutePath}"));
         }
 
-        return resolved.Value.Mount.Backend.List(resolved.Value.RelativePath);
+        var backendResult = resolved.Value.Mount.Backend.List(resolved.Value.RelativePath);
+        if (backendResult.IsFailure)
+            return backendResult;
+        
+        var entries = new HashSet<string>(backendResult.Value, StringComparer.Ordinal);
+
+        string currentAbs = resolved.Value.AbsolutePath;
+
+        foreach (var mount in _mounts)
+        {
+            string mountPoint = mount.MountPoint;
+
+            if (mountPoint == currentAbs)
+                continue;
+
+            string parent = FsPath.GetParent(mountPoint);
+
+            if (!string.Equals(parent, currentAbs, StringComparison.Ordinal))
+                continue;
+
+            string name = FsPath.GetFileName(mountPoint);
+
+            if (!string.IsNullOrEmpty(name))
+                entries.Add(name);
+        }
+
+        return Result<string[], KernelError>.Success([.. entries.OrderBy(e => e, StringComparer.Ordinal)]);
     }
 }

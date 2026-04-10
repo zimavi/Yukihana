@@ -130,7 +130,7 @@ public static partial class VFS
         return Result<ResolvedPath, KernelError>.Failure(KernelError.Corrupted($"Symlink loop detected while resolving: {path}"));
     }
 
-    private static MountInfo? FindBestMount(string absolutePath)
+    internal static MountInfo? FindBestMount(string absolutePath)
     {
         absolutePath = FsPath.NormalizeAbsolute(absolutePath);
 

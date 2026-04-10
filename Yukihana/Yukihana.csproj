@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Sdk Name="Cosmos.Sdk" Version="3.0.42" />
+  <Sdk Name="Cosmos.Sdk" Version="3.0.45" />
 
   <PropertyGroup>
     <CosmosEnableNetwork>false</CosmosEnableNetwork>
@@ -16,7 +16,7 @@
     <Day>$([System.DateTime]::Now.ToString("dd"))</Day>
     <Time>$([System.DateTime]::Now.ToString("HHmm"))</Time>
 
-    <CosmosVersion>3.0.42</CosmosVersion>
+    <CosmosVersion>3.0.45</CosmosVersion>
     <YukihanaVersion>2.0.1</YukihanaVersion>
 
     <YukihanaVersionInfo>
@@ -47,8 +47,8 @@ public static class VersionInfo
   
   <!-- Core kernel packages -->
   <ItemGroup>
-    <PackageReference Include="Cosmos.Kernel" Version="3.0.42" />
-    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.42" />
+    <PackageReference Include="Cosmos.Kernel" Version="3.0.45" />
+    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.45" />
   </ItemGroup>
 
 </Project>

@@ -277,7 +277,11 @@ public sealed class TempFs : IVfsBackend
             throw new DirectoryNotFoundException(parentPath);
 
         string name = FsPath.GetFileName(path);
-        var node = new Node(FsNodeKind.File);
+        var node = new Node(FsNodeKind.File)
+        {
+            UserId = VFS.CurrentCredentials.UserId,
+            GroupId = VFS.CurrentCredentials.GroupId,
+        };
         parent.Children[name] = node;
         return node;
     }
@@ -306,7 +310,9 @@ public sealed class TempFs : IVfsBackend
         parent.Children[name] = new Node(FsNodeKind.File)
         {
             Data = copy,
-            Permissions = exists ? existing!.Permissions : FsPermissionUtil.DefaultFile
+            Permissions = exists ? existing!.Permissions : FsPermissionUtil.DefaultFile,
+            UserId = exists ? existing!.UserId : VFS.CurrentCredentials.UserId,
+            GroupId = exists ? existing!.GroupId : VFS.CurrentCredentials.GroupId,
         };
 
         return Option<KernelError>.None();
@@ -344,7 +350,9 @@ public sealed class TempFs : IVfsBackend
         parent.Children[name] = new Node(FsNodeKind.SymbolicLink)
         {
             LinkTarget = target,
-            Permissions = FsPermissionUtil.DefaultSymbolic
+            Permissions = FsPermissionUtil.DefaultSymbolic,
+            UserId = VFS.CurrentCredentials.UserId,
+            GroupId = VFS.CurrentCredentials.GroupId,
         };
 
         return Option<KernelError>.None();

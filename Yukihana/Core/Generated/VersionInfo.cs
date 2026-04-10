@@ -8,9 +8,9 @@ namespace Yukihana.Core.Generated;
 public static class VersionInfo
 {
     public const string KERNEL_NAME = "CosmosOS";
-    public const string KERNEL_VERSION = "3.0.42";
+    public const string KERNEL_VERSION = "3.0.45";
 
     public const string OS_NAME = "Yukihana";
     public const string OS_VERSION = "2.0.1";
-    public const string OS_REVISION = "rev-202604081959";
+    public const string OS_REVISION = "rev-202604101439";
 }

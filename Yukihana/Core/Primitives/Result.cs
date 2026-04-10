@@ -9,7 +9,7 @@ namespace Yukihana.Core.Primitives;
 /// </summary>
 /// <typeparam name="TValue">The type of successful result value.</typeparam>
 /// <typeparam name="TError">The type of failure error value.</typeparam>
-public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError>>
+public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError>>, IDisposable
 {
 #region Properties & fields
 
@@ -58,6 +58,24 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     /// Creates a failed result containing the specified error.
     /// </summary>
     public static Result<TValue, TError> Failure(TError error) => new(value: default, error, isSuccess: false);
+
+#endregion
+
+#region IDisposable
+
+    public void Dispose()
+    {
+        if (IsSuccess)
+            DisposeIfNeeded(_value);
+        else
+            DisposeIfNeeded(_error);
+    }
+
+    private static void DisposeIfNeeded<T>(T? value)
+    {
+        if (value is IDisposable disposable)
+            disposable.Dispose();
+    }
 
 #endregion
 
