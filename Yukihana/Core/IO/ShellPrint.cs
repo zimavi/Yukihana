@@ -117,6 +117,13 @@ public static class ShellPrint
 
     private static void PrintPrefix(string prefix, ConsoleColor color)
     {
+        if (prefix == PRINT_PADDING)
+        {
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.Write($"  {prefix}  ");
+            return;
+        }
+
         Console.ForegroundColor = ConsoleColor.Gray;
         Console.Write(" [");
 

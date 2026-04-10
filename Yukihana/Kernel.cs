@@ -12,21 +12,19 @@ using Yukihana.Core.IO.RamFS;
 using Yukihana.Core.IO.Vfs.Backends;
 using Yukihana.Core.Resources;
 using Yukihana.Core.Security;
-using Yukihana.OS.Shell;
 using Sys = Cosmos.Kernel.System;
 
 namespace Yukihana;
 
 public class Kernel : Sys.Kernel
 {
-    // private static RamFs _initRamFs = null!;
-
     public static AuthService AuthService { get; private set; } = null!;
     public static UserSession UserSession { get; private set; } = null!;
     
     public static bool SpeedrunShutdown { get; set; } = false;
 
     public static Kernel Instance { get; private set; } = null!;
+    public static DateTime BootTime { get; } = DateTime.Now;
 
     protected override void BeforeRun()
     {
@@ -35,11 +33,7 @@ public class Kernel : Sys.Kernel
         Logger.ReportLevel = LogLevel.Trace;
 
         var ramfsTask = ShellPrint.CreateTask("Loading initramfs", "init").Progress(0).Work().Display();
-
-        // _initRamFs = RamFs.FromArchive(RamFsData.Data).OrPanic("initramfs was not initialized");
-
         var initramfs = new InitRamFs(RamFsData.Data);
-
         ramfsTask.Ok().Display();
 
         ShellPrint.InfoK("Initializing VFS...", "init");
@@ -84,19 +78,9 @@ public class Kernel : Sys.Kernel
             $"Logged in as '{toAuth.Name}' uid={toAuth.Id} gid={toAuth.PrimaryGroupId} root={toAuth.PrimaryGroupId == 0}", 
             "init");
 
-        ShellPrint.OkK($"System initialization finished at {DateTime.UtcNow:dd-MM-yyyy HH:mm:ss.fff}", "init");
+        ShellPrint.OkK($"System initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}", "init");
 
         ShellPrint.KernelPrintEnabled = false;
-
-        var shell = new Shell(
-            commands: ShellDefaults.CreateDefaultCommands(),
-            options: new ShellOptions
-            {
-                UserName = UserSession.CurrentUser.Name,
-                HostName = "yukihana-os"
-            });
-
-        shell.Run();
         
         Stop();
     }
