@@ -36,12 +36,7 @@ public sealed class OptionalResourceGroup<TState>
         return this;
     }
 
-    public Option<TState> TryLoad() =>
-        BootEnvironment.Stage == BootStage.EarlyKernel 
-            ? TryLoadEarly() 
-            : TryLoadCore();
-
-    private Option<TState> TryLoadEarly()
+    public Option<TState> TryLoad()
     {
         var logger = new Logger("assetloader.optional");
         logger.Info("OptionalResourceGroup -> TryLoad()");
@@ -90,54 +85,6 @@ public sealed class OptionalResourceGroup<TState>
         _commit(state);
 
         logger.Info($"Optional asset group \"{_name}\" loaded successfully");
-        
-        return state;
-    }
-
-    private Option<TState> TryLoadCore()
-    {
-        UnitManager.Target("Optional Asset Group Load");
-
-        var u = UnitManager.Start("Load", $"asset group \"{_name}\"");
-
-        TState state = _createState();
-
-        List<(OptionalResourceMember<TState> Member, byte[] Data)> staged = new(_members.Count);
-
-        foreach(var member in _members)
-        {
-            
-            var mu = UnitManager.Start("Load", $"\"{member.Description}\" for group \"{_name}\"");
-
-            Option<byte[]> result = _provider.TryLoad(member.Path);
-
-            if (result.IsNone)
-            {
-                mu.Fail();
-
-                return Option<TState>.None();
-            }
-
-            mu.Ok();
-
-            staged.Add((member, result.Value));
-        }
-
-        int i = 0;
-        foreach(var item in staged)
-        {
-            UnitManager.Start("Apply", $"\"{item.Member.Description}\"");
-            
-            item.Member.Apply(state, item.Data);
-            i++;
-        }
-
-        var uu = UnitManager.Start("Commit", $"assets to group \"{_name}\"");
-
-        _commit(state);
-
-        uu.Ok();
-        u.Ok();
         
         return state;
     }

@@ -11,7 +11,7 @@ public static class ConsoleRenderer
     {
         if (!Enabled) return;
 
-        if (BootEnvironment.Stage == BootStage.ServiceInit)
+        if (BootEnvironment.Stage == BootStage.CoreInit)
             RenderSystemd(entry);
         else
             RenderKernel(entry);
@@ -35,7 +35,7 @@ public static class ConsoleRenderer
     
     private static void RenderSystemd(LogEntry e)
     {
-        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine($"          {e.Source}: {e.Message}");
         Console.ResetColor();
     }

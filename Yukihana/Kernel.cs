@@ -85,7 +85,11 @@ public class Kernel : Sys.Kernel
             provider:       new VfsResourceProvider()
         );
 
-        fontGroup.Add("/usr/share/fonts/zap-ext-light18.psf", "Console font", (s, data) => s.Font = PCScreenFont.LoadFont(data));
+        fontGroup.Add(
+            relativePath:   "/usr/share/fonts/zap-ext-light18.psf", 
+            description:    "Console font", 
+            applyCallback:  (s, data) => s.Font = PCScreenFont.LoadFont(data)
+        );
 
         fontGroup.TryLoad().Switch(
             some =>
@@ -93,10 +97,8 @@ public class Kernel : Sys.Kernel
                 KernelConsole.Default!.Font = some.Font;
                 logger.Info("Applyied font to console");
             },
-            () => {}
+            none: () => {}
         );
-
-        logger.Info("Mounting partitions");
 
         logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}");
 
@@ -108,9 +110,7 @@ public class Kernel : Sys.Kernel
         // STAGE 2 -> Core init
         //
 
-        //
-        // Filesystem
-        //
+        logger.Info("Mounting partitions");
 
         VFS.Mount("/tmp", new TempFs());
         VFS.Mount("/var", new TempFs());
@@ -118,12 +118,7 @@ public class Kernel : Sys.Kernel
         VFS.Mount("/dev", new DevFs());
         VFS.Mount("/proc", new ProcFs());
 
-        VFS.Mount("/usr", new OverlayFs(new SubtreeFs(initramfs, "usr"), new TempFs()));
-        VFS.Mount("/etc", new OverlayFs(new SubtreeFs(initramfs, "etc"), new TempFs()));
-
-        //
-        // User Service
-        //
+        VFS.Mount("/etc", new TempFs());
 
         using (var u = UnitManager.Start("Start", "auth.service"))
         {
@@ -137,19 +132,11 @@ public class Kernel : Sys.Kernel
             u.Ok();
         }
 
-        UnitManager.Target("User Service");
+        UnitManager.Target("Default Target");
 
-        //
-        // Remount root
-        //
+        Console.WriteLine("\nHello, from Yukihana OS! :D\n");
 
         VFS.Remount("/", "/initrd", new TempFs());
-
-        //
-        // STAGE 3 -> idk
-        //
-
-        Console.WriteLine("\nHello, from Yukihana OS!\n");
         
         Stop();
     }

@@ -22,56 +22,6 @@ public static partial class VFS
 
     public static void Mount(string mountPoint, IVfsBackend backend)
     {
-        if (BootEnvironment.Stage == BootStage.EarlyKernel)
-            MountEarly(mountPoint, backend);
-        else
-            MountCore(mountPoint, backend);
-    }
-
-    public static bool Unmount(string mountPoint) =>
-        BootEnvironment.Stage == BootStage.EarlyKernel
-            ? UnmountEarly(mountPoint)
-            : UnmountCore(mountPoint);
-        
-    public static void Remount(string mountPoint, string oldMountPoint, IVfsBackend backend)
-    {
-        if (BootEnvironment.Stage == BootStage.EarlyKernel)
-            RemountEarly(mountPoint, oldMountPoint, backend);
-        else
-            RemountCore(mountPoint, oldMountPoint, backend);
-    }
-
-    public static Option<KernelError> ChangeDirectory(string path)
-    {
-        var resolved = ResolvePath(path, followFinalSymlink: true);
-        if (resolved.IsFailure)
-            return Option<KernelError>.Some(resolved.Error);
-
-        if (resolved.Value.Kind != FsNodeKind.Directory)
-            return Option<KernelError>.Some(KernelError.InvalidOp($"Path is not a directory: {path}"));
-
-        CurrentDirectory = resolved.Value.AbsolutePath;
-        return Option<KernelError>.None();
-    }
-
-    public static bool Exists(string path)
-    {
-        var resolved = ResolvePath(path, followFinalSymlink: false);
-        return !resolved.IsFailure && resolved.Value.Kind != FsNodeKind.Missing;
-    }
-
-    public static FsNodeKind GetKind(string path)
-    {
-        var resolved = ResolvePath(path, followFinalSymlink: false);
-        return resolved.IsFailure ? FsNodeKind.Missing : resolved.Value.Kind;
-    }
-
-    public static bool IsDirectory(string path) => GetKind(path) == FsNodeKind.Directory;
-    public static bool IsSymbolicLink(string path) => GetKind(path) == FsNodeKind.SymbolicLink;
-
-
-    private static void MountEarly(string mountPoint, IVfsBackend backend)
-    {
         ArgumentNullException.ThrowIfNull(backend);
 
         mountPoint = FsPath.NormalizeAbsolute(mountPoint);
@@ -102,40 +52,8 @@ public static partial class VFS
 
         _logger.Info($"Mounted {mountPoint}");
     }
-    private static void MountCore(string mountPoint, IVfsBackend backend)
-    {
-        ArgumentNullException.ThrowIfNull(backend);
 
-        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
-
-        var u = UnitManager.Start("Mount", $"{mountPoint} with {backend.GetType().Name}");
-
-        for (int i = 0; i < _mounts.Count; i++)
-        {
-            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
-            {
-                _mounts[i] = new MountInfo
-                {
-                    MountPoint = mountPoint,
-                    Backend = backend
-                };
-                u.Ok();
-                return;
-            }
-        }
-
-        _mounts.Add(new MountInfo
-        {
-            MountPoint = mountPoint,
-            Backend = backend
-        });
-
-        _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
-
-        u.Ok();
-    }
-
-    private static bool UnmountEarly(string mountPoint)
+    public static bool Unmount(string mountPoint)
     {
         mountPoint = FsPath.NormalizeAbsolute(mountPoint);
 
@@ -154,27 +72,8 @@ public static partial class VFS
 
         return false;
     }
-    private static bool UnmountCore(string mountPoint)
-    {
-        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
-
-        var u = UnitManager.Start("Unmount", $"{mountPoint}");
-
-        for (int i = 0; i < _mounts.Count; i++)
-        {
-            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
-            {
-                _mounts.RemoveAt(i);
-                _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
-                u.Ok();
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static void RemountEarly(string mountPoint, string oldMountPoint, IVfsBackend backend)
+        
+    public static void Remount(string mountPoint, string oldMountPoint, IVfsBackend backend)
     {
         ArgumentNullException.ThrowIfNull(backend);
 
@@ -226,53 +125,32 @@ public static partial class VFS
         _logger.Info($"Remounted {mountPoint}");
     }
 
-    private static void RemountCore(string mountPoint, string oldMountPoint, IVfsBackend backend)
+    public static Option<KernelError> ChangeDirectory(string path)
     {
-        ArgumentNullException.ThrowIfNull(backend);
+        var resolved = ResolvePath(path, followFinalSymlink: true);
+        if (resolved.IsFailure)
+            return Option<KernelError>.Some(resolved.Error);
 
-    mountPoint = FsPath.NormalizeAbsolute(mountPoint);
-    oldMountPoint = FsPath.NormalizeAbsolute(oldMountPoint);
+        if (resolved.Value.Kind != FsNodeKind.Directory)
+            return Option<KernelError>.Some(KernelError.InvalidOp($"Path is not a directory: {path}"));
 
-    var u = UnitManager.Start("Remount", $"{mountPoint} -> {oldMountPoint}");
-
-    MountInfo? oldMount = null;
-
-    for (int i = 0; i < _mounts.Count; i++)
-    {
-        if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
-        {
-            oldMount = _mounts[i];
-            _mounts.RemoveAt(i);
-            break;
-        }
+        CurrentDirectory = resolved.Value.AbsolutePath;
+        return Option<KernelError>.None();
     }
 
-    for (int i = 0; i < _mounts.Count; i++)
+    public static bool Exists(string path)
     {
-        if (string.Equals(_mounts[i].MountPoint, oldMountPoint, StringComparison.Ordinal))
-        {
-            _mounts.RemoveAt(i);
-            break;
-        }
+        var resolved = ResolvePath(path, followFinalSymlink: false);
+        return !resolved.IsFailure && resolved.Value.Kind != FsNodeKind.Missing;
     }
 
-    _mounts.Add(new MountInfo
+    public static FsNodeKind GetKind(string path)
     {
-        MountPoint = mountPoint,
-        Backend = backend
-    });
-
-    if (oldMount != null)
-    {
-        _mounts.Add(new MountInfo
-        {
-            MountPoint = oldMountPoint,
-            Backend = oldMount.Backend
-        });
+        var resolved = ResolvePath(path, followFinalSymlink: false);
+        return resolved.IsFailure ? FsNodeKind.Missing : resolved.Value.Kind;
     }
 
-    _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+    public static bool IsDirectory(string path) => GetKind(path) == FsNodeKind.Directory;
+    public static bool IsSymbolicLink(string path) => GetKind(path) == FsNodeKind.SymbolicLink;
 
-    u.Ok();
-    }
 }
