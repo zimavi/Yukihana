@@ -25,5 +25,11 @@ public sealed class UserSession
         VFS.SetCredentials(Credentials);
     }
 
+    public void Logout()
+    {
+        CurrentUser = User.None;
+        VFS.SetCredentials(VfsCredentials.None);
+    }
+
     public bool IsRoot => CurrentUser.Id == 0;
 }

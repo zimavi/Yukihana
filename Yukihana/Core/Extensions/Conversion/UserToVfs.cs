@@ -10,10 +10,9 @@ public static class UserToVfs
 {
     public static VfsCredentials ToVfsCredentials(this User user)
     {
-        return new VfsCredentials(
-            user.Id, 
-            user.PrimaryGroupId, 
-            user.Id == 0
-        );
+        if (user.Id == User.None.Id)
+            return VfsCredentials.None;
+
+        return new VfsCredentials(user.Id, user.PrimaryGroupId, user.Id == 0);
     }
 }

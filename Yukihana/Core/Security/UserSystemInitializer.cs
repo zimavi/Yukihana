@@ -5,7 +5,7 @@ namespace Yukihana.Core.Security;
 
 public static class UserSystemInitializer
 {
-    public static IUserStore CreateDefault(out User defaultUser)
+    public static IUserStore CreateDefault()
     {
         var store = new InMemoryUserStore();
 
@@ -36,8 +36,6 @@ public static class UserSystemInitializer
 
         store.AddUser(root);
         store.AddUser(yuki);
-
-        defaultUser = yuki;
 
         return store;
     }
