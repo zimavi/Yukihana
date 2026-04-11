@@ -89,7 +89,6 @@ public sealed class OverlayFs : IVfsBackend
         if (!TryResolveEffectiveFile(path, out var backend, out var relativePath))
             return Result<byte[], KernelError>.Failure(KernelError.NotFound(path));
 
-        ShellPrint.InfoK($"read lower/upper file: {path}", "overlay.read");
         return backend.ReadAllBytes(relativePath);
     }
 
@@ -106,8 +105,6 @@ public sealed class OverlayFs : IVfsBackend
         FileShare share = FileShare.Read)
     {
         path = Normalize(path);
-
-        ShellPrint.InfoK($"open request: {path} mode={mode} access={access}", "overlay.open");
 
         bool wantsWrite = (access & FileAccess.Write) != 0;
         bool createLike = mode is FileMode.Create or FileMode.CreateNew or FileMode.OpenOrCreate or FileMode.Append;
@@ -166,8 +163,6 @@ public sealed class OverlayFs : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot write to the overlay root."));
 
-        ShellPrint.InfoK($"write request: {path} ({data.Length} bytes)", "overlay.write");
-
         if (TryGetUpperMetadata(path, out var upperMeta))
         {
             if (upperMeta.Kind == FsNodeKind.Directory)
@@ -220,8 +215,6 @@ public sealed class OverlayFs : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.None();
 
-        ShellPrint.InfoK($"mkdir request: {path}", "overlay.mkdir");
-
         if (TryGetUpperMetadata(path, out var upperMeta))
         {
             if (upperMeta.Kind == FsNodeKind.File)
@@ -244,7 +237,6 @@ public sealed class OverlayFs : IVfsBackend
         if (result.IsSome)
             return result;
 
-        ShellPrint.OkK($"directory visible in upper: {path}", "overlay.mkdir");
         return Option<KernelError>.None();
     }
 
@@ -255,8 +247,6 @@ public sealed class OverlayFs : IVfsBackend
 
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot create a symlink at the root."));
-
-        ShellPrint.InfoK($"symlink request: {path} -> {target}", "overlay.symlink");
 
         if (TryGetUpperMetadata(path, out var upperMeta) && upperMeta.Kind != FsNodeKind.Missing)
             return Option<KernelError>.Some(KernelError.InvalidOp($"Path already exists: {path}"));
@@ -274,7 +264,6 @@ public sealed class OverlayFs : IVfsBackend
         if (result.IsSome)
             return result;
 
-        ShellPrint.OkK($"symlink created in upper: {path}", "overlay.symlink");
         return Option<KernelError>.None();
     }
 
@@ -284,8 +273,6 @@ public sealed class OverlayFs : IVfsBackend
 
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot delete the overlay root."));
-
-        ShellPrint.InfoK($"delete request: {path}", "overlay.delete");
 
         bool upperExists = TryGetUpperMetadata(path, out var upperMeta);
         bool lowerExists = TryGetLowerMetadata(path, out var lowerMeta);
@@ -299,13 +286,10 @@ public sealed class OverlayFs : IVfsBackend
             if (result.IsSome)
                 return result;
 
-            ShellPrint.WarnK($"removed upper entry: {path}", "overlay.delete");
-
             return Option<KernelError>.None();
         }
 
         _whiteouts.Add(path);
-        ShellPrint.WarnK($"whiteout created: {path}", "overlay.whiteout");
         return Option<KernelError>.None();
     }
 
@@ -361,8 +345,6 @@ public sealed class OverlayFs : IVfsBackend
     public Option<KernelError> SetPermissions(string path, FsPermissions permissions)
     {
         path = Normalize(path);
-
-        ShellPrint.InfoK($"chmod request: {path} -> {FsPermissionUtil.ToSymbolicString(permissions)}", "overlay.perm");
 
         if (TryGetUpperMetadata(path, out var upperMeta))
         {
@@ -491,7 +473,6 @@ public sealed class OverlayFs : IVfsBackend
             if (createLink.IsSome)
                 return createLink;
 
-            ShellPrint.InfoK($"copy-up symlink: {path}", "overlay.cow");
             return Option<KernelError>.None();
         }
 
@@ -503,7 +484,6 @@ public sealed class OverlayFs : IVfsBackend
         if (write.IsSome)
             return write;
 
-        ShellPrint.InfoK($"copy-up file: {path}", "overlay.cow");
         return Option<KernelError>.None();
     }
 
@@ -527,7 +507,6 @@ public sealed class OverlayFs : IVfsBackend
             if (create.IsSome)
                 return create;
 
-            ShellPrint.InfoK($"copy-up directory: {path}", "overlay.cow");
             return Option<KernelError>.None();
         }
 
@@ -547,7 +526,6 @@ public sealed class OverlayFs : IVfsBackend
             if (createLink.IsSome)
                 return createLink;
 
-            ShellPrint.InfoK($"copy-up symlink: {path}", "overlay.cow");
             return Option<KernelError>.None();
         }
 
@@ -623,8 +601,7 @@ public sealed class OverlayFs : IVfsBackend
     {
         path = Normalize(path);
 
-        if (_whiteouts.Remove(path))
-            ShellPrint.InfoK($"whiteout removed: {path}", "overlay.whiteout");
+        _whiteouts.Remove(path);
     }
 
     private void ClearWhiteoutsAlongPath(string path)
@@ -640,8 +617,7 @@ public sealed class OverlayFs : IVfsBackend
         {
             current = string.IsNullOrEmpty(current) ? segment : current + "/" + segment;
 
-            if (_whiteouts.Remove(current))
-                ShellPrint.InfoK($"whiteout removed: {current}", "overlay.whiteout");
+            _whiteouts.Remove(current);
         }
     }
 

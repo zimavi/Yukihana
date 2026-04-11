@@ -134,8 +134,6 @@ public sealed class TempFs : IVfsBackend
 
         target = node.LinkTarget;
 
-        ShellPrint.InfoK($"follow link {path} -> {node.LinkTarget}", "fs.tempfs");
-
         return true;
     }
 

@@ -96,6 +96,9 @@ public sealed class InitRamFs : IVfsBackend
             return data;
     }
 
+    //
+    // TODO: Switch to SharpZipLib Tar implementation when nativeaot async is implemented
+    //
     private void BuildFilesystemFromTar(byte[] tarBytes)
     {
         int offset = 0;
@@ -156,7 +159,6 @@ public sealed class InitRamFs : IVfsBackend
                     offset = Align512(offset + (int)size);
                     continue;
                 default:
-                    ShellPrint.WarnK($"Unknown TAR type '{typeFlag}' for {fullPath}", "ramfs");
                     offset = Align512(offset + (int)size);
                     continue;
             }

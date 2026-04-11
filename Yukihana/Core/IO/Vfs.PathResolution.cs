@@ -105,7 +105,7 @@ public static partial class VFS
                     {
                         string deniedPath = FsPath.CombineAbsolute(mount.MountPoint, currentRel);
 
-                        ShellPrint.WarnK($"permission denied: read {deniedPath}", "vfs.perm");
+                        _logger.Warn($"permission denied: read {deniedPath}");
                         return Result<ResolvedPath, KernelError>.Failure(KernelError.PermissionsDenied($"read {deniedPath}"));
                     }
                 }

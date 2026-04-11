@@ -1,30 +1,18 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
-using System.Runtime.CompilerServices;
-
 namespace Yukihana.Core.Debug;
 
-public readonly struct KernelError
+public readonly struct KernelError(string code, string message)
 {
-#region Properties
+    #region Properties
 
-    public string Code { get; }
-    public string Message { get; }
+    public string Code { get; } = code;
+    public string Message { get; } = message;
 
-#endregion
+    #endregion
 
-#region Constructor
-
-    public KernelError(string code, string message)
-    {
-        Code = code;
-        Message = message;
-    }
-
-#endregion
-
-#region Helpers
+    #region Helpers
 
     public override string ToString() => $"{Code}: {Message}";
     

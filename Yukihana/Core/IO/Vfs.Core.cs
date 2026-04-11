@@ -9,6 +9,8 @@ namespace Yukihana.Core.IO;
 
 public static partial class VFS
 {
+    private static readonly Logger _logger = new("vfs");
+
     private static readonly List<MountInfo> _mounts = new();
     public static string CurrentDirectory { get; private set; } = "/";
     public static VfsCredentials CurrentCredentials { get; private set; } = VfsCredentials.Root;
@@ -16,58 +18,27 @@ public static partial class VFS
     public static void SetCredentials(VfsCredentials credentials)
     {
         CurrentCredentials = credentials;
-        ShellPrint.InfoK($"credentials changed: uid={credentials.GroupId}, gid={credentials.UserId}, root={credentials.IsRoot}", "vfs.auth");
     }
 
     public static void Mount(string mountPoint, IVfsBackend backend)
     {
-        ArgumentNullException.ThrowIfNull(backend);
-
-        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
-
-        ShellPrint.InfoK($"mounting {mountPoint} with {backend.GetType().Name}", "vfs.mount");
-
-        for (int i = 0; i < _mounts.Count; i++)
-        {
-            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
-            {
-                _mounts[i] = new MountInfo
-                {
-                    MountPoint = mountPoint,
-                    Backend = backend
-                };
-                ShellPrint.InfoK($"remounting {mountPoint}", "vfs.mount");
-                return;
-            }
-        }
-
-        _mounts.Add(new MountInfo
-        {
-            MountPoint = mountPoint,
-            Backend = backend
-        });
-        _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
-
-        ShellPrint.OkK($"mounted {mountPoint}", "vfs.mount");
+        if (BootEnvironment.Stage == BootStage.EarlyKernel)
+            MountEarly(mountPoint, backend);
+        else
+            MountCore(mountPoint, backend);
     }
 
-    public static bool Unmount(string mountPoint)
+    public static bool Unmount(string mountPoint) =>
+        BootEnvironment.Stage == BootStage.EarlyKernel
+            ? UnmountEarly(mountPoint)
+            : UnmountCore(mountPoint);
+        
+    public static void Remount(string mountPoint, string oldMountPoint, IVfsBackend backend)
     {
-        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
-
-        ShellPrint.InfoK($"unmounting {mountPoint}", "vfs.mount");
-
-        for (int i = 0; i < _mounts.Count; i++)
-        {
-            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
-            {
-                _mounts.RemoveAt(i);
-                ShellPrint.WarnK($"unmounted {mountPoint}", "vfs.mount");
-                return true;
-            }
-        }
-
-        return false;
+        if (BootEnvironment.Stage == BootStage.EarlyKernel)
+            RemountEarly(mountPoint, oldMountPoint, backend);
+        else
+            RemountCore(mountPoint, oldMountPoint, backend);
     }
 
     public static Option<KernelError> ChangeDirectory(string path)
@@ -97,4 +68,211 @@ public static partial class VFS
 
     public static bool IsDirectory(string path) => GetKind(path) == FsNodeKind.Directory;
     public static bool IsSymbolicLink(string path) => GetKind(path) == FsNodeKind.SymbolicLink;
+
+
+    private static void MountEarly(string mountPoint, IVfsBackend backend)
+    {
+        ArgumentNullException.ThrowIfNull(backend);
+
+        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
+
+        _logger.Info($"Mounting {mountPoint} with {backend.GetType().Name}");
+
+        for (int i = 0; i < _mounts.Count; i++)
+        {
+            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+            {
+                _mounts[i] = new MountInfo
+                {
+                    MountPoint = mountPoint,
+                    Backend = backend
+                };
+                _logger.Info($"Remounting {mountPoint}");
+                return;
+            }
+        }
+
+        _mounts.Add(new MountInfo
+        {
+            MountPoint = mountPoint,
+            Backend = backend
+        });
+
+        _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+
+        _logger.Info($"Mounted {mountPoint}");
+    }
+    private static void MountCore(string mountPoint, IVfsBackend backend)
+    {
+        ArgumentNullException.ThrowIfNull(backend);
+
+        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
+
+        var u = UnitManager.Start("Mount", $"{mountPoint} with {backend.GetType().Name}");
+
+        for (int i = 0; i < _mounts.Count; i++)
+        {
+            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+            {
+                _mounts[i] = new MountInfo
+                {
+                    MountPoint = mountPoint,
+                    Backend = backend
+                };
+                u.Ok();
+                return;
+            }
+        }
+
+        _mounts.Add(new MountInfo
+        {
+            MountPoint = mountPoint,
+            Backend = backend
+        });
+
+        _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+
+        u.Ok();
+    }
+
+    private static bool UnmountEarly(string mountPoint)
+    {
+        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
+
+        _logger.Info($"Unmounting {mountPoint}");
+
+        for (int i = 0; i < _mounts.Count; i++)
+        {
+            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+            {
+                _mounts.RemoveAt(i);
+                _logger.Info($"Unmounted {mountPoint}");
+                _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+                return true;
+            }
+        }
+
+        return false;
+    }
+    private static bool UnmountCore(string mountPoint)
+    {
+        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
+
+        var u = UnitManager.Start("Unmount", $"{mountPoint}");
+
+        for (int i = 0; i < _mounts.Count; i++)
+        {
+            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+            {
+                _mounts.RemoveAt(i);
+                _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+                u.Ok();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void RemountEarly(string mountPoint, string oldMountPoint, IVfsBackend backend)
+    {
+        ArgumentNullException.ThrowIfNull(backend);
+
+        mountPoint = FsPath.NormalizeAbsolute(mountPoint);
+        oldMountPoint = FsPath.NormalizeAbsolute(oldMountPoint);
+
+        _logger.Info($"Remounting {mountPoint} -> {oldMountPoint} with {backend.GetType().Name}");
+
+        MountInfo? oldMount = null;
+
+        for (int i = 0; i < _mounts.Count; i++)
+        {
+            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+            {
+                oldMount = _mounts[i];
+                _mounts.RemoveAt(i);
+                break;
+            }
+        }
+
+        for (int i = 0; i < _mounts.Count; i++)
+        {
+            if (string.Equals(_mounts[i].MountPoint, oldMountPoint, StringComparison.Ordinal))
+            {
+                _mounts.RemoveAt(i);
+                break;
+            }
+        }
+
+        _mounts.Add(new MountInfo
+        {
+            MountPoint = mountPoint,
+            Backend = backend
+        });
+
+        if (oldMount is not null)
+        {
+            _mounts.Add(new MountInfo
+            {
+                MountPoint = oldMountPoint,
+                Backend = oldMount.Backend
+            });
+
+            _logger.Info($"Moved old mount {mountPoint} -> {oldMountPoint}");
+        }
+
+        _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+
+        _logger.Info($"Remounted {mountPoint}");
+    }
+
+    private static void RemountCore(string mountPoint, string oldMountPoint, IVfsBackend backend)
+    {
+        ArgumentNullException.ThrowIfNull(backend);
+
+    mountPoint = FsPath.NormalizeAbsolute(mountPoint);
+    oldMountPoint = FsPath.NormalizeAbsolute(oldMountPoint);
+
+    var u = UnitManager.Start("Remount", $"{mountPoint} -> {oldMountPoint}");
+
+    MountInfo? oldMount = null;
+
+    for (int i = 0; i < _mounts.Count; i++)
+    {
+        if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+        {
+            oldMount = _mounts[i];
+            _mounts.RemoveAt(i);
+            break;
+        }
+    }
+
+    for (int i = 0; i < _mounts.Count; i++)
+    {
+        if (string.Equals(_mounts[i].MountPoint, oldMountPoint, StringComparison.Ordinal))
+        {
+            _mounts.RemoveAt(i);
+            break;
+        }
+    }
+
+    _mounts.Add(new MountInfo
+    {
+        MountPoint = mountPoint,
+        Backend = backend
+    });
+
+    if (oldMount != null)
+    {
+        _mounts.Add(new MountInfo
+        {
+            MountPoint = oldMountPoint,
+            Backend = oldMount.Backend
+        });
+    }
+
+    _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+
+    u.Ok();
+    }
 }

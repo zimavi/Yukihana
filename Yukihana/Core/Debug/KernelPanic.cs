@@ -1,95 +1,61 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Cosmos.Kernel.Core.IO;
-using Yukihana.Core.Generated;
-using Yukihana.Core.IO;
 
 namespace Yukihana.Core.Debug;
 
 public static class KernelPanic
 {
-    private const int MAX_ENTRIES = 20;
-
     [DoesNotReturn]
-    [StackTraceHidden]
     public static void Panic(
-        string panicReason,
-        [CallerMemberName] string callerMemberName = "",
-        [CallerFilePath] string callerFilePath = "",
-        [CallerLineNumber] int callerLineNumber = 0)
+        string reason,
+        [CallerMemberName] string m = "",
+        [CallerFilePath] string f = "",
+        [CallerLineNumber] int l = 0)
     {
-        ShellPrint.KernelPrintEnabled = true;
-        ShellPrint.DoLogKernelPrint = false;
-        Logger.Enabled = false;
+        ConsoleRenderer.Enabled = true;
 
-        ShellPrint.PrintK("=== KERNEL PANIC ===", "panic");
-        ShellPrint.PrintK($"Kernel: {VersionInfo.KERNEL_NAME} v{VersionInfo.KERNEL_VERSION}", "panic");
-        ShellPrint.PrintK($"OS: {VersionInfo.OS_NAME} v{VersionInfo.OS_VERSION} ({VersionInfo.OS_REVISION})", "panic");
-        ShellPrint.PrintK($"Reason: {panicReason}", "panic");
-        ShellPrint.PrintK($"Location: {callerMemberName} in {Path.GetFileName(callerFilePath)}:{callerLineNumber}", "panic");
-        ShellPrint.PrintK("====================", "panic");
+        Print("*** KERNEL PANIC ***", ConsoleColor.Red);
+        Print($"Reason: {reason}", ConsoleColor.White);
+        Print($"At: {m} ({Path.GetFileName(f)}:{l})", ConsoleColor.Gray);
 
-        //LogPrinter.PrintLogs(MAX_ENTRIES);
+        Print("\n--- Last log entries ---", ConsoleColor.DarkGray);
 
-        var logs = Logger.Logs;
-        if (logs is not null && logs.Count > 0)
+        var logs = KernelLog.Entries;
+        int start = Math.Max(0, logs.Count - 20);
+
+        for (int i = start; i < logs.Count; i++)
         {
-            int total = logs.Count; 
-            int start = total > MAX_ENTRIES ? total - MAX_ENTRIES : 0;
-
-            if (start > 0)
-                ShellPrint.InfoK($"Showing last {MAX_ENTRIES} of {total} log entries (older logs trimmed)", "panic");
-
-            for(int i = start; i < total; i++)
-                ShellPrint.InfoK(logs[i].ToString(), "panic");
-        }
-        else
-        {
-            ShellPrint.InfoK("No logs available", "panic");
+            var e = logs[i];
+            Console.WriteLine($"[{e.Time:0.000}] {e.Source}: {e.Message}");
         }
 
-        MirrorPanicToSerial(panicReason, callerMemberName, callerFilePath, callerLineNumber);
+        MirrorToSerial(reason, m, f, l);
 
-        ShellPrint.InfoK("System halted due to kernel panic.", "panic");
+        Print("\nSystem halted.", ConsoleColor.Red);
 
-        Kernel.SpeedrunShutdown = true;
-        
-        Kernel.Instance.Stop();
-
-        for(;;);
+        for (;;);
     }
 
-    private static void MirrorPanicToSerial(
-        string panicReason, 
-        string callerMemberName, 
-        string callerFilePath, 
-        int callerLineNumber)
+    private static void Print(string text, ConsoleColor color)
     {
-        Serial.WriteString("\n\n=== KERNEL PANIC ===\n");
-        Serial.WriteString($"Kernel: {VersionInfo.KERNEL_NAME} v{VersionInfo.KERNEL_VERSION}\n");
-        Serial.WriteString($"OS: {VersionInfo.OS_NAME} v{VersionInfo.OS_VERSION} ({VersionInfo.OS_REVISION})\n");
-        Serial.WriteString($"Reason: {panicReason}\n");
-        Serial.WriteString($"Location: {callerMemberName} in {Path.GetFileName(callerFilePath)}:{callerLineNumber}\n");
-        Serial.WriteString("====================\n");
+        Console.ForegroundColor = color;
+        Console.WriteLine(text);
+        Console.ResetColor();
+    }
 
-        var logs = Logger.Logs;
+    private static void MirrorToSerial(string reason, string m, string f, int l)
+    {
+        Serial.WriteString("\n*** KERNEL PANIC ***\n");
+        Serial.WriteString($"Reason: {reason}\n");
+        Serial.WriteString($"At: {m} ({Path.GetFileName(f)}:{l})\n");
 
-        Serial.WriteString("Full log list:\n");
-
-        if (logs is not null && logs.Count > 0)
+        foreach (var e in KernelLog.Entries)
         {
-            for(int i = 0; i < logs.Count; i++)
-                Serial.WriteString(logs[i].ToString() + "\n");
+            Serial.WriteString($"[{e.Time:0.000}] {e.Source}: {e.Message}\n");
         }
-        else
-        {
-            Serial.WriteString("No logs available\n");
-        }
-
-        Serial.WriteString("Kernel panid end.\n\n");
     }
 }

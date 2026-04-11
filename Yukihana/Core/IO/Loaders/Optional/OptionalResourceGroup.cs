@@ -36,76 +36,109 @@ public sealed class OptionalResourceGroup<TState>
         return this;
     }
 
-    public Option<TState> TryLoad()
+    public Option<TState> TryLoad() =>
+        BootEnvironment.Stage == BootStage.EarlyKernel 
+            ? TryLoadEarly() 
+            : TryLoadCore();
+
+    private Option<TState> TryLoadEarly()
     {
-        Logger.Trace("OptionalResourceGroup -> TryLoad()");
+        var logger = new Logger("assetloader.optional");
+        logger.Info("OptionalResourceGroup -> TryLoad()");
 
-        var groupTask = ShellPrint.CreateTask($"Loading asset group '{_name}'", "OptionalLoader").Progress(0).Display();
-
-        Logger.Trace("ORG -> Creating state");
+        logger.Info($"Loading asset group \"{_name}\"");
 
         TState state = _createState();
 
         List<(OptionalResourceMember<TState> Member, byte[] Data)> staged = new(_members.Count);
 
-        Logger.Trace($"ORG -> To stage: {_members.Count}");
+        logger.Info($"To stage: {_members.Count}");
 
         foreach(var member in _members)
         {
-            var memberTask = ShellPrint.CreateTask(
-                $"Loading '{member.Description}' for group '{_name}'",
-                "OptionalLoader")
-                .Progress(0)
-                .Display();
-            
-            Logger.Trace($"ORG -> Calling LoadProvider of type {_provider.GetType().Name}");
+            logger.Info($"Loading \"'{member.Description}\" for group \"{_name}\"");
 
             Option<byte[]> result = _provider.TryLoad(member.Path);
 
             if (result.IsNone)
             {
-                memberTask.Warn()
-                    .WithText($"Optional group '{_name}' dropped: missing '{member.Description}'")
-                    .Display();
+                logger.Warn($"Group \"{_name}\" dropped: missing \"{member.Description}\"");
 
                 return Option<TState>.None();
             }
 
-            Logger.Trace($"ORG -> Member '{member.Description}' loaded successfully");
+            logger.Info($"Member \"{member.Description}\" loaded successfully");
 
             staged.Add((member, result.Value));
 
-            memberTask.Ok().WithText($"Staged '{member.Description}' for group '{_name}'").Display();
-            groupTask.Progress(GetProgress(staged.Count, _members.Count)).Display();
+            logger.Info($"Staged \"{member.Description}\" for group \"{_name}\"");
         }
 
-        Logger.Trace("ORG -> All members have been staged. Applying them to state");
-
-        groupTask.Work().WithText($"Applying asset group '{_name}'").Progress(0);
+        logger.Info("All members have been staged. Applying them to state");
 
         int i = 0;
         foreach(var item in staged)
         {
-            groupTask.Progress(GetProgress(i, staged.Count)).Display();
-
-            Logger.Trace($"ORG -> Apply for '{item.Member.Description}'");
+            logger.Info($"Apply for \"{item.Member.Description}\"");
             
             item.Member.Apply(state, item.Data);
             i++;
         }
 
-        Logger.Trace("ORG -> Commiting state");
-
-        groupTask.Info().WithText($"Commiting asset group '{_name}'").Display();
+        logger.Info("Commiting state");
 
         _commit(state);
 
-        groupTask.Ok()
-            .WithText($"Optional asset group '{_name}' loaded successfully.")
-            .Display();
+        logger.Info($"Optional asset group \"{_name}\" loaded successfully");
         
         return state;
     }
 
-    private int GetProgress(int current, int max) => (int)Math.Floor((double)current / max * 100);
+    private Option<TState> TryLoadCore()
+    {
+        UnitManager.Target("Optional Asset Group Load");
+
+        var u = UnitManager.Start("Load", $"asset group \"{_name}\"");
+
+        TState state = _createState();
+
+        List<(OptionalResourceMember<TState> Member, byte[] Data)> staged = new(_members.Count);
+
+        foreach(var member in _members)
+        {
+            
+            var mu = UnitManager.Start("Load", $"\"{member.Description}\" for group \"{_name}\"");
+
+            Option<byte[]> result = _provider.TryLoad(member.Path);
+
+            if (result.IsNone)
+            {
+                mu.Fail();
+
+                return Option<TState>.None();
+            }
+
+            mu.Ok();
+
+            staged.Add((member, result.Value));
+        }
+
+        int i = 0;
+        foreach(var item in staged)
+        {
+            UnitManager.Start("Apply", $"\"{item.Member.Description}\"");
+            
+            item.Member.Apply(state, item.Data);
+            i++;
+        }
+
+        var uu = UnitManager.Start("Commit", $"assets to group \"{_name}\"");
+
+        _commit(state);
+
+        uu.Ok();
+        u.Ok();
+        
+        return state;
+    }
 }
