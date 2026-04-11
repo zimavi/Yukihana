@@ -7,5 +7,5 @@ public interface IArchiveCompressor
 {
     public bool IsSupportedFormat(byte[] data);
     public byte[] Decompress(byte[] data);
-    public byte[] Compress(byte[] data);
+    public byte[] Compress(byte[] data, int level = 6);
 }

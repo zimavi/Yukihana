@@ -1,20 +1,25 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Yukihana.Core.Debug;
+using Yukihana.Core.Extensions.Primitives;
+using Yukihana.Core.Extensions.System;
 using Yukihana.Core.IO;
 using Yukihana.Core.IO.Loaders;
 using Yukihana.Core.IO.Loaders.Optional;
-using Yukihana.Core.IO.RamFS;
 using Yukihana.Core.IO.Vfs.Backends;
 using Yukihana.Core.Resources;
 using Yukihana.Core.Security;
 using Sys = Cosmos.Kernel.System;
 
 namespace Yukihana;
+
+delegate int TestDelegate(int a, int b);
 
 public class Kernel : Sys.Kernel
 {
@@ -26,27 +31,58 @@ public class Kernel : Sys.Kernel
     public static Kernel Instance { get; private set; } = null!;
     public static DateTime BootTime { get; } = DateTime.Now;
 
+    private static readonly string _ramfs_namespace = "Yukihana";
+    private static readonly string _ramfs_subfolders = "Core.Resources";
+    private static readonly string _ramfs_file = "initramfs.tar.gz";
+
+    private static string _ramfs_resource_key => string.Join('.', _ramfs_namespace, _ramfs_subfolders, _ramfs_file);
+
     protected override void BeforeRun()
     {
+        try
+        {
+            Init();
+        }
+        catch (Exception ex)
+        {
+            KernelPanic.Panic($"Unhandled exception during boot: \"{ex.Message}\"");
+        }
+    }
+
+    private void Init()
+    {
+        //
+        // STAGE 1 -> Early boot
+        //
+
         Instance = this;
+        
+        var logger = new Logger("init");
 
-        Logger.ReportLevel = LogLevel.Trace;
+        logger.Info($"Fetching \"{_ramfs_file}\"");
+        byte[] ramfsBytes;
 
-        var ramfsTask = ShellPrint.CreateTask("Loading initramfs", "init").Progress(0).Work().Display();
-        var initramfs = new InitRamFs(RamFsData.Data);
-        ramfsTask.Ok().Display();
+        var assembly = Assembly.GetExecutingAssembly();
 
-        ShellPrint.InfoK("Initializing VFS...", "init");
+        using (var result = assembly.GetManifestResourceStream(_ramfs_resource_key).ToOption())
+        using (var memStream = new MemoryStream())
+        {
+            var stream = result.OrPanic($"Cannot localte \"{_ramfs_file}\"");
+            stream.CopyTo(memStream);
+            ramfsBytes = memStream.ToArray();
+        }
 
-        ShellPrint.InfoK("Mounting initramfs as root", "init");
+        logger.Info("Loading initramfs");
+        var initramfs = new InitRamFs(ramfsBytes);
 
+        logger.Info("Mounting initramfs as root");
         VFS.Mount("/", initramfs);
 
         var fontGroup = new OptionalResourceGroup<FontState>(
-            "Fonts",
-            () => new FontState(),
-            state => {},
-            new VfsResourceProvider()
+            name:           "Fonts",
+            createState:    () => new FontState(),
+            commit:         state => {},
+            provider:       new VfsResourceProvider()
         );
 
         fontGroup.Add("/usr/share/fonts/zap-ext-light18.psf", "Console font", (s, data) => s.Font = PCScreenFont.LoadFont(data));
@@ -55,11 +91,27 @@ public class Kernel : Sys.Kernel
             some =>
             {
                 KernelConsole.Default!.Font = some.Font;
-                ShellPrint.InfoK("Applied font to console", "init");
+                logger.Info("Applyied font to console");
             },
             () => {}
         );
-        
+
+        logger.Info("Mounting partitions");
+
+        logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}");
+
+        BootEnvironment.Stage = BootStage.CoreInit;
+
+        UnitManager.Target("System Core Init");
+
+        //
+        // STAGE 2 -> Core init
+        //
+
+        //
+        // Filesystem
+        //
+
         VFS.Mount("/tmp", new TempFs());
         VFS.Mount("/var", new TempFs());
 
@@ -69,32 +121,48 @@ public class Kernel : Sys.Kernel
         VFS.Mount("/usr", new OverlayFs(new SubtreeFs(initramfs, "usr"), new TempFs()));
         VFS.Mount("/etc", new OverlayFs(new SubtreeFs(initramfs, "etc"), new TempFs()));
 
-        ShellPrint.InfoK("Initializing user manager...", "init");
+        //
+        // User Service
+        //
+
+        using (var u = UnitManager.Start("Start", "auth.service"))
+        {
+            AuthService = new AuthService(UserSystemInitializer.CreateDefault());
+            u.Ok();
+        }
         
-        AuthService = new AuthService(UserSystemInitializer.CreateDefault(out var toAuth));
-        UserSession = new UserSession(toAuth);
+        using (var u = UnitManager.Start("Start", "User Session"))
+        {
+            UserSession = new UserSession(User.None);
+            u.Ok();
+        }
 
-        ShellPrint.InfoK(
-            $"Logged in as '{toAuth.Name}' uid={toAuth.Id} gid={toAuth.PrimaryGroupId} root={toAuth.PrimaryGroupId == 0}", 
-            "init");
+        UnitManager.Target("User Service");
 
-        ShellPrint.OkK($"System initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}", "init");
+        //
+        // Remount root
+        //
 
-        ShellPrint.KernelPrintEnabled = false;
+        VFS.Remount("/", "/initrd", new TempFs());
+
+        //
+        // STAGE 3 -> idk
+        //
+
+        Console.WriteLine("\nHello, from Yukihana OS!\n");
         
         Stop();
     }
 
     protected override void Run()
-    {
-    }
+    { }
 
     protected override void AfterRun()
     {
-        ShellPrint.KernelPrintEnabled = true;
         if (SpeedrunShutdown)
             return;
-        ShellPrint.InfoK("AfterRun", "AfterRun() called");
-        ShellPrint.InfoK("AfterRun", "Goodbye!");
+        
+        UnitManager.Start("Finish", "System");
+        UnitManager.Target("System AfterRun");
     }
 }

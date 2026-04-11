@@ -14,8 +14,6 @@ public static class ArchiveCompressorFactory
         IArchiveCompressor[] compressors =
         {
             new GzipArchiveCompressor(),
-            new ZipArchiveCompressor(),
-            new Lz4ArchiveCompressor(),
         };
 
         foreach (var compressor in compressors)

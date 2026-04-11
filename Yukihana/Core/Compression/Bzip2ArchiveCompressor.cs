@@ -1,0 +1,43 @@
+// Yukihana OS 2026 Yukihana OS Contributors
+// Licensed under the Apache 2.0 License. See LICENSE for details.
+
+using ICSharpCode.SharpZipLib.BZip2;
+
+namespace Yukihana.Core.Compression;
+
+public sealed class Bzip2ArchiveCompressor : IArchiveCompressor
+{
+    private const byte ID1 = 0x4a;
+    private const byte ID2 = 0x5a;
+
+    private const byte COMPRESSION_METHOD_HUFFMAN = 0x68;
+
+    public byte[] Compress(byte[] data, int level = 6)
+    {
+        using var srcStream = new MemoryStream(data);
+        using var dstStream = new MemoryStream();
+
+        BZip2.Compress(srcStream, dstStream, isStreamOwner: false, level);
+
+        return dstStream.ToArray();
+    }
+
+    public byte[] Decompress(byte[] data)
+    {
+        using var srcStream = new MemoryStream(data);
+        using var dstStream = new MemoryStream();
+
+        BZip2.Decompress(srcStream, dstStream, isStreamOwner: false);
+
+        return dstStream.ToArray();
+    }
+
+    public bool IsSupportedFormat(byte[] data)
+    {
+        return data is not null &&
+                data.Length >= 18 &&
+                data[0] == ID1 &&
+                data[1] == ID2 &&
+                data[2] == COMPRESSION_METHOD_HUFFMAN;
+    }
+}

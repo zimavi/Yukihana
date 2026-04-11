@@ -51,4 +51,12 @@ public static class VersionInfo
     <PackageReference Include="Cosmos.Kernel.System" Version="3.0.45" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Core/Resources/initramfs.tar.gz" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
+  </ItemGroup>
+
 </Project>
