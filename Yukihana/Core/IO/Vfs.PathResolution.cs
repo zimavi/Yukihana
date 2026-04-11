@@ -38,7 +38,8 @@ public static partial class VFS
                         FsNodeKind.Directory, 
                         FsPermissionUtil.DefaultDirectory, 
                         CurrentCredentials.UserId, 
-                        CurrentCredentials.GroupId);
+                        CurrentCredentials.GroupId,
+                        0);
                 
                 if (rootMeta.Kind == FsNodeKind.SymbolicLink && followFinalSymlink)
                 {

@@ -22,15 +22,29 @@ public sealed class ProcFs : IVfsBackend
 
     private static string GetMemoryInfo()
     {
+        ulong totalPages = PageAllocator.TotalPageCount;
+        ulong freePages = PageAllocator.FreePageCount;
+        ulong usedPages = totalPages - freePages;
+        ulong pageSize = PageAllocator.PageSize;
+
+        ulong totalBytes = totalPages * pageSize;
+        ulong freeBytes = freePages * pageSize;
+        ulong usedBytes = usedPages * pageSize;
+
         return
-            $"mem_size\t: {PageAllocator.RamSize}\n" +
-            $"pages\t: {PageAllocator.TotalPageCount}\n" +
-            $"free_pages\t: {PageAllocator.FreePageCount}\n";
+            $"page_size\t: {pageSize}" +
+            $"pages_total\t: {totalPages}" +
+            $"pages_used\t: {usedPages}" +
+            $"pages_free\t: {freePages}" +
+
+            $"memory_total\t: {totalBytes}" +
+            $"memory_used\t: {usedBytes}" +
+            $"memory_free\t: {freeBytes}";
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Option<KernelError> ReturnReadOnly() => 
-        KernelError.InvalidOp("Procfs is read-only");
+    private static KernelError ReturnReadOnly() => 
+        KernelError.InvalidOp("Read-only filesystem.");
 
     #region Interface Implementation
 
@@ -56,18 +70,22 @@ public sealed class ProcFs : IVfsBackend
         return FsNodeKind.Missing;
     }
 
+    public VfsSpaceInfo GetSpaceInfo() => new(0, 0);
+
+    public Option<KernelError> ResizeSpace(ulong totalBytes) => ReturnReadOnly();
+
     public Result<string[], KernelError> List(string path)
     {
         if(!string.IsNullOrEmpty(path.Trim('/')))
             return Result<string[], KernelError>.Failure(KernelError.NotFound(path));
         
-        return Result<string[], KernelError>.Success(_files.Keys.ToArray());
+        return Result<string[], KernelError>.Success([.. _files.Keys]);
     }
 
     public Result<Stream, KernelError> Open(string path, FileMode mode = FileMode.Open, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read)
     {
         if (mode != FileMode.Open || (access & FileAccess.Write) != 0)
-            return Result<Stream, KernelError>.Failure(KernelError.InvalidOp("Procfs is read-only"));
+            return Result<Stream, KernelError>.Failure(ReturnReadOnly());
         
         var bytesResult = ReadAllBytes(path);
         if (bytesResult.IsFailure) return Result<Stream, KernelError>.Failure(bytesResult.Error);
@@ -104,13 +122,13 @@ public sealed class ProcFs : IVfsBackend
 
         if (string.IsNullOrEmpty(path))
         {
-            metadata = new VfsMetadata(FsNodeKind.Directory, FsPermissionUtil.DefaultDirectory, 0, 0);
+            metadata = new VfsMetadata(FsNodeKind.Directory, FsPermissionUtil.DefaultDirectory, 0, 0, 0);
             return true;
         }
 
         if (_files.ContainsKey(path))
         {
-            metadata = new VfsMetadata(FsNodeKind.File, FsPermissionUtil.DefaultFile, 0, 0);
+            metadata = new VfsMetadata(FsNodeKind.File, FsPermissionUtil.DefaultFile, 0, 0, 0);
             return true;
         }
 

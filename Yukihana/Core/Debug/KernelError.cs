@@ -27,6 +27,7 @@ public readonly struct KernelError(string code, string message)
         public const string CORRUPTED_DATA      = "corrupted_data";
         public const string PERMISSION_DENIED   = "permission_denied";
         public const string INVALID_OPERATION   = "invalid_operation";
+        public const string OUT_OF_SPACE        = "out_of_space";
     }
 
 #endregion
@@ -40,6 +41,8 @@ public readonly struct KernelError(string code, string message)
     public static KernelError PermissionsDenied(string description) => new(Codes.PERMISSION_DENIED, description);
 
     public static KernelError InvalidOp(string description) => new(Codes.INVALID_OPERATION, description);
+
+    public static KernelError NoSpaceLeft() => new(Codes.OUT_OF_SPACE, "No space left on device.");
 
 #endregion
 

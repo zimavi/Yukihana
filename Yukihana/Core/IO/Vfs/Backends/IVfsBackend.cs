@@ -13,6 +13,8 @@ public interface IVfsBackend
     FsNodeKind GetKind(string path);
     bool TryReadLink(string path, out string target);
     bool TryGetMetadata(string path, out VfsMetadata metadata);
+    VfsSpaceInfo GetSpaceInfo();
+    Option<KernelError> ResizeSpace(ulong totalBytes);
 
     Result<byte[], KernelError> ReadAllBytes(string path);
     Result<string, KernelError> ReadAllText(string path, Encoding? encoding = null);

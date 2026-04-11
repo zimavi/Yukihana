@@ -1,6 +1,7 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
+using System.Runtime.CompilerServices;
 using System.Text;
 using Yukihana.Core.Debug;
 using Yukihana.Core.Primitives;
@@ -48,41 +49,46 @@ public sealed class DevFs : IVfsBackend
 
     public Option<KernelError> WriteAllBytes(string path, byte[] data)
     {
-        return Option<KernelError>.Some(KernelError.InvalidOp("Cannot write all bytes to device directly"));
+        using var result = Open(path, FileMode.Open, FileAccess.Write, FileShare.Read);
+        if (result.IsFailure)
+            return result.Error;
+        
+        var stream = result.Value;
+        stream.Write(data);
+        stream.Flush();
+
+        return Option<KernelError>.None();
     }
 
-    public Option<KernelError> CreateDirectory(string path, bool recursive = true)
-        => Option<KernelError>.Some(KernelError.InvalidOp("Devfs is read-only"));
+    public Option<KernelError> CreateDirectory(string path, bool recursive = true) => ReturnReadOnly();
 
-    public Option<KernelError> CreateSymbolicLink(string path, string target)
-        => Option<KernelError>.Some(KernelError.InvalidOp("Devfs is read-only"));
+    public Option<KernelError> CreateSymbolicLink(string path, string target) => ReturnReadOnly();
 
-    public Option<KernelError> Delete(string path)
-        => Option<KernelError>.Some(KernelError.InvalidOp("Devfs is read-only"));
+    public Option<KernelError> Delete(string path) => ReturnReadOnly();
 
     public Result<string[], KernelError> List(string path)
     {
         if (!string.IsNullOrEmpty(path.Trim('/')))
             return Result<string[], KernelError>.Failure(KernelError.NotFound(path));
 
-        return Result<string[], KernelError>.Success(_devices.Keys.ToArray());
+        return Result<string[], KernelError>.Success([.. _devices.Keys]);
     }
 
-    public Option<KernelError> SetPermissions(string path, FsPermissions permissions)
-        => Option<KernelError>.Some(KernelError.InvalidOp("DevFS is read-only"));
+    public Option<KernelError> SetPermissions(string path, FsPermissions permissions) => 
+        ReturnReadOnly();
 
     public bool TryGetMetadata(string path, out VfsMetadata metadata)
     {
         path = path.Trim('/');
         if (string.IsNullOrEmpty(path))
         {
-            metadata = new VfsMetadata(FsNodeKind.Directory, FsPermissionUtil.DefaultDirectory, 0, 0);
+            metadata = new VfsMetadata(FsNodeKind.Directory, FsPermissionUtil.DefaultDirectory, 0, 0, 0);
             return true;
         }
 
         if (_devices.ContainsKey(path))
         {
-            metadata = new VfsMetadata(FsNodeKind.File, FsPermissionUtil.DefaultFile, 0, 0);
+            metadata = new VfsMetadata(FsNodeKind.File, FsPermissionUtil.DefaultFile, 0, 0, 0);
             return true;
         }
 
@@ -120,6 +126,13 @@ public sealed class DevFs : IVfsBackend
 
         return _devices.ContainsKey(path) ? FsNodeKind.File : FsNodeKind.Missing;
     }
+
+    public VfsSpaceInfo GetSpaceInfo() => new(0, 0);
+
+    public Option<KernelError> ResizeSpace(ulong totalBytes) => ReturnReadOnly();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private KernelError ReturnReadOnly() => KernelError.InvalidOp("Read-only filesystem.");
 
     #endregion
 

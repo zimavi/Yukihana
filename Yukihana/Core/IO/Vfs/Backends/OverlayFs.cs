@@ -7,6 +7,7 @@ using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO.Vfs.Backends;
 
+// This class is used to mount writable fs on top of read-only fs
 public sealed class OverlayFs : IVfsBackend
 {
     private readonly IVfsBackend _lower;
@@ -81,6 +82,10 @@ public sealed class OverlayFs : IVfsBackend
         metadata = default;
         return false;
     }
+
+    public VfsSpaceInfo GetSpaceInfo() => _upper.GetSpaceInfo();
+
+    public Option<KernelError> ResizeSpace(ulong totalBytes) => _upper.ResizeSpace(totalBytes);
 
     public Result<byte[], KernelError> ReadAllBytes(string path)
     {
@@ -274,8 +279,8 @@ public sealed class OverlayFs : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot delete the overlay root."));
 
-        bool upperExists = TryGetUpperMetadata(path, out var upperMeta);
-        bool lowerExists = TryGetLowerMetadata(path, out var lowerMeta);
+        bool upperExists = TryGetUpperMetadata(path, out _);
+        bool lowerExists = TryGetLowerMetadata(path, out _);
 
         if (!upperExists && !lowerExists)
             return Option<KernelError>.Some(KernelError.NotFound(path));
@@ -346,7 +351,7 @@ public sealed class OverlayFs : IVfsBackend
     {
         path = Normalize(path);
 
-        if (TryGetUpperMetadata(path, out var upperMeta))
+        if (TryGetUpperMetadata(path, out _))
         {
             var result = _upper.SetPermissions(path, permissions);
             if (result.IsSome)

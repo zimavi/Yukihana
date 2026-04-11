@@ -9,12 +9,14 @@ public readonly struct VfsMetadata
     public FsPermissions Permissions { get; }
     public int UserId { get; }
     public int GroupId { get; }
+    public long Size { get; }
 
-    public VfsMetadata(FsNodeKind kind, FsPermissions permissions, int userId, int groupId) 
+    public VfsMetadata(FsNodeKind kind, FsPermissions permissions, int userId, int groupId, long size) 
     {
         Kind = kind;
         Permissions = permissions;
         UserId = userId;
         GroupId = groupId;
+        Size = size;
     }
 }

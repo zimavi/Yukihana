@@ -1,6 +1,7 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
+using System.Runtime.CompilerServices;
 using System.Text;
 using Yukihana.Core.Compression;
 using Yukihana.Core.Debug;
@@ -19,6 +20,8 @@ public sealed class InitRamFs : IVfsBackend
         public int GroupId;
         public byte[]? Data;
         public string? LinkTarget;
+        public long Size;
+        public long SubtreeSize;
         public Dictionary<string, Inode>? Children = new(StringComparer.Ordinal);
 
         public Inode(FsNodeKind kind)
@@ -44,7 +47,7 @@ public sealed class InitRamFs : IVfsBackend
             _data = data;
         }
 
-        public long Length => _data.Length;
+        public long Length => _data.LongLength;
         public bool CanRead => true;
         public bool CanWrite => false;
         public bool CanSeek => true;
@@ -81,6 +84,8 @@ public sealed class InitRamFs : IVfsBackend
 
         byte[] tarBytes = Decompress(compressedArchive);
         BuildFilesystemFromTar(tarBytes);
+
+        ComputeSubtreeSizes(_root);
     }
 
     private static byte[] Decompress(byte[] data)
@@ -128,6 +133,7 @@ public sealed class InitRamFs : IVfsBackend
                         Permissions = FsPermissionUtil.FromUnixMode(mode & 0x1FF),
                         UserId = uid,
                         GroupId = gid,
+                        Size = size,
                     };
                     AddNode(fullPath, inode);
                     offset = Align512(offset + (int)size);
@@ -141,6 +147,7 @@ public sealed class InitRamFs : IVfsBackend
                         Permissions = FsPermissionUtil.FromUnixMode(mode & 0x1FF),
                         UserId = uid,
                         GroupId = gid,
+                        Size = size,
                     };
                     AddNode(fullPath, inode);
                     offset = Align512(offset + (int)size);
@@ -154,6 +161,7 @@ public sealed class InitRamFs : IVfsBackend
                         Permissions = FsPermissionUtil.FromUnixMode(mode & 0x1FF),
                         UserId = uid,
                         GroupId = gid,
+                        Size = size,
                     };
                     AddNode(fullPath, inode);
                     offset = Align512(offset + (int)size);
@@ -194,10 +202,7 @@ public sealed class InitRamFs : IVfsBackend
         return current;
     }
 
-    private void EnsureParentDirectories(string path)
-        => TraverseToParent(path, createMissing: true);
-
-    private static int Align512(int value) => ((value + 511) / 512) * 512;
+    private static int Align512(int value) => (value + 511) / 512 * 512;
 
     private static bool IsAllZero(byte[] data, int offset, int count)
     {
@@ -226,6 +231,64 @@ public sealed class InitRamFs : IVfsBackend
         return path;
     }
 
+    private static long ComputeSubtreeSizes(Inode root)
+    {
+        if (root is null)
+            return 0;
+
+        var stack = new Stack<(Inode node, bool visited)>(128);
+        stack.Push((root, false));
+
+        while (stack.Count > 0)
+        {
+            var (node, visited) = stack.Pop();
+
+            if (!visited)
+            {
+                // Visit later after children
+                stack.Push((node, true));
+
+                if (node.Kind == FsNodeKind.Directory && node.Children != null)
+                {
+                    foreach (var child in node.Children.Values)
+                        stack.Push((child, false));
+                }
+            }
+            else
+            {
+                long total = 0;
+
+                switch (node.Kind)
+                {
+                    case FsNodeKind.Directory:
+                    {
+                        if (node.Children != null)
+                        {
+                            foreach (var child in node.Children.Values)
+                                total += child.SubtreeSize;
+                        }
+                        break;
+                    }
+
+                    case FsNodeKind.SymbolicLink:
+                    case FsNodeKind.File:
+                    default:
+                    {
+                        total = node.Size;
+                        break;
+                    }
+                }
+
+                node.SubtreeSize = total;
+            }
+        }
+
+        return root.SubtreeSize;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public KernelError ReturnReadOnly() => KernelError.InvalidOp("Read-only filesystem.");
+
     #region Interface Implementation
 
     public bool Exists(string path) => FindNode(path) is not null;
@@ -251,9 +314,17 @@ public sealed class InitRamFs : IVfsBackend
             metadata = default;
             return false;
         }
-        metadata = new VfsMetadata(node.Kind, node.Permissions, node.UserId, node.GroupId);
+        metadata = new VfsMetadata(node.Kind, node.Permissions, node.UserId, node.GroupId, node.Size);
         return true;
     }
+
+    public VfsSpaceInfo GetSpaceInfo()
+    {
+        ulong usedBytes = (ulong)_root.SubtreeSize;
+        return new(usedBytes, usedBytes);
+    }
+    
+    public Option<KernelError> ResizeSpace(ulong totalBytes) => ReturnReadOnly();
 
     public Result<byte[], KernelError> ReadAllBytes(string path)
     {
@@ -279,16 +350,11 @@ public sealed class InitRamFs : IVfsBackend
     }
 
     #region Write Operations (Read-Only)
-    public Option<KernelError> WriteAllBytes(string path, byte[] data) =>
-        Option<KernelError>.Some(KernelError.InvalidOp($"Read-only filesystem: {path}"));
-    public Option<KernelError> CreateDirectory(string path, bool recursive) =>
-        Option<KernelError>.Some(KernelError.InvalidOp($"Read-only filesystem: {path}"));
-    public Option<KernelError> CreateSymbolicLink(string path, string target) =>
-        Option<KernelError>.Some(KernelError.InvalidOp($"Read-only filesystem: {path}"));
-    public Option<KernelError> Delete(string path) =>
-        Option<KernelError>.Some(KernelError.InvalidOp($"Read-only filesystem: {path}"));
-    public Option<KernelError> SetPermissions(string path, FsPermissions permissions) =>
-        Option<KernelError>.Some(KernelError.InvalidOp($"Read-only filesystem: {path}"));
+    public Option<KernelError> WriteAllBytes(string path, byte[] data) => ReturnReadOnly();
+    public Option<KernelError> CreateDirectory(string path, bool recursive) => ReturnReadOnly();
+    public Option<KernelError> CreateSymbolicLink(string path, string target) => ReturnReadOnly();
+    public Option<KernelError> Delete(string path) => ReturnReadOnly();
+    public Option<KernelError> SetPermissions(string path, FsPermissions permissions) => ReturnReadOnly();
     #endregion
 
     public Result<string[], KernelError> List(string path)
@@ -321,10 +387,10 @@ public sealed class InitRamFs : IVfsBackend
         path = FsPath.NormalizeRelative(path);
 
         if (mode != FileMode.Open)
-            return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Read-only filesystem: {path}"));
+            return Result<Stream, KernelError>.Failure(ReturnReadOnly());
         
         if ((access & FileAccess.Write) != 0)
-            return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Read-only filesystem: {path}"));
+            return Result<Stream, KernelError>.Failure(ReturnReadOnly());
         
         var node = FindNode(path);
         if (node is null)
