@@ -2,8 +2,6 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Yukihana.Core.Debug;
@@ -146,6 +144,7 @@ public class Kernel : Sys.Kernel
 
     protected override void AfterRun()
     {
+        Console.WriteLine("\n");
         if (SpeedrunShutdown)
             return;
         
