@@ -1,8 +1,10 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Yukihana.Core.Debug;
+using Yukihana.Core.Exceptions;
 using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.Extensions.Primitives;
@@ -28,7 +30,20 @@ public static class OptionResultExtensions
                 callerFilePath,
                 callerLineNumber);
 
-            return default;
+            throw new UnreachableException();
+        }
+
+        public T OrThrow(
+            string context)
+        {
+            if (option.IsSome)
+                return option.Value;
+            
+            string message = string.IsNullOrWhiteSpace(context)
+                ? "Option was None."
+                : context;
+            
+            throw new OptionNoneException(message);
         }
 
         public Option<T> OnNone(Action handler)
@@ -71,7 +86,25 @@ public static class OptionResultExtensions
                 callerFilePath,
                 callerLineNumber);
             
-            return default!;
+            throw new UnreachableException();
+        }
+
+        public TValue OrThrow(
+            string context,
+            Func<TError, string>? errorFormatter = null)
+        {
+            if (result.IsSuccess)
+                return result.Value;
+
+            string errorText = errorFormatter is not null
+                ? errorFormatter(result.Error)
+                : result.Error?.ToString() ?? "<null>";
+
+            string reason = string.IsNullOrWhiteSpace(context)
+                ? $"Operation failed: {errorText}"
+                : $"{context}: {errorText}";
+            
+            throw new ResultException<TError>(reason, result.Error);
         }
 
         public Result<TValue, TError> OnFailure(Action<TError> handler)
