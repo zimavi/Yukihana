@@ -49,9 +49,10 @@ public class Kernel : Sys.Kernel
             KernelLog.LogToScreen = true;
             Init();
         }
-        catch (Exception ex)
+        catch
         {
-            KernelPanic.Panic($"Unhandled exception during boot: \"{ex.Message}\"");
+            _kernelLogger.Error("Unhandled exception at init. Panicking.");
+            KernelPanic.Panic("Unhandled exception during boot");
         }
     }
 
@@ -152,7 +153,9 @@ public class Kernel : Sys.Kernel
         UserSession = new UserSession(User.None);
 
         logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}.");
-        
+
+        KernelPanic.Panic("test");
+
         Stop();
     }
 
