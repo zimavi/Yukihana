@@ -4,11 +4,19 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using Yukihana.Core.Compression;
+using Yukihana.Core.Compression.Archives;
 using Yukihana.Core.Debug;
+using Yukihana.Core.Extensions.Primitives;
 using Yukihana.Core.IO.RamFS;
 using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO.Vfs.Backends;
+
+public enum InitRamFsArchive
+{
+    Tar,
+    Cpio
+}
 
 public sealed class InitRamFs : IVfsBackend
 {
@@ -78,12 +86,13 @@ public sealed class InitRamFs : IVfsBackend
 
     private readonly Inode _root = new(FsNodeKind.Directory);
 
-    public InitRamFs(byte[] compressedArchive)
+    public InitRamFs(byte[] compressedArchive, InitRamFsArchive archiveType)
     {
         ArgumentNullException.ThrowIfNull(compressedArchive);
 
-        byte[] tarBytes = Decompress(compressedArchive);
-        BuildFilesystemFromTar(tarBytes);
+        byte[] archiveBytes = Decompress(compressedArchive);
+        
+        BuildFilesystemFromArchive(archiveBytes);
 
         ComputeSubtreeSizes(_root);
     }
@@ -101,74 +110,90 @@ public sealed class InitRamFs : IVfsBackend
             return data;
     }
 
-    //
-    // TODO: Switch to SharpZipLib Tar implementation when nativeaot async is implemented
-    //
-    private void BuildFilesystemFromTar(byte[] tarBytes)
+    private void BuildFilesystemFromArchive(byte[] archiveBytes)
     {
-        int offset = 0;
-        while (offset + 512 <= tarBytes.Length)
-        {
-            if(IsAllZero(tarBytes, offset, 512))
-                break;
-            
-            string name = ReadAscii(tarBytes, offset, 100);
-            int mode = (int)ReadOctal(tarBytes, offset + 100, 8);
-            int uid = (int)ReadOctal(tarBytes, offset + 108, 8);
-            int gid = (int)ReadOctal(tarBytes, offset + 116, 8);
-            long size = ReadOctal(tarBytes, offset + 124, 12);
-            char typeFlag = (char)tarBytes[offset + 156];
-            string linkName = ReadAscii(tarBytes, offset + 157, 100);
-            string prefix = ReadAscii(tarBytes, offset + 345, 155);
+        var archivator = ArchivatorFactory.Detect(archiveBytes);
 
-            string fullPath = NormalizePath(string.IsNullOrEmpty(prefix) ? name : $"{prefix}/{name}");
-            offset += 512;
+        var archive = archivator.OrThrow("Unsupported initramfs format.").Read(archiveBytes);
+
+        var createdNodes = new Dictionary<string, Inode>();
+
+        foreach(var entry in archive.Entries)
+        {
+            string fullPath = NormalizePath(entry.Path);
 
             Inode inode;
-            switch (typeFlag)
+
+            switch (entry.Kind)
             {
-                case '5':
+                case ArchiveEntryKind.Directory:
+                {
                     inode = new Inode(FsNodeKind.Directory)
                     {
-                        Permissions = FsPermissionUtil.FromUnixMode(mode & 0x1FF),
-                        UserId = uid,
-                        GroupId = gid,
-                        Size = size,
+                        Permissions = FsPermissionUtil.FromUnixMode(entry.Mode & 0x1FF),
+                        UserId = entry.UserId,
+                        GroupId = entry.GroupId,
+                        Size = 0,
                     };
+
                     AddNode(fullPath, inode);
-                    offset = Align512(offset + (int)size);
-                    continue;
-                
-                case '2':
-                case '1':
+                    createdNodes[fullPath] = inode;
+                    break;
+                }
+
+                case ArchiveEntryKind.SymbolicLink:
+                {
                     inode = new Inode(FsNodeKind.SymbolicLink)
                     {
-                        LinkTarget = FsPath.SanitizeSymlinkTarget(linkName),
-                        Permissions = FsPermissionUtil.FromUnixMode(mode & 0x1FF),
-                        UserId = uid,
-                        GroupId = gid,
-                        Size = size,
+                        LinkTarget = FsPath.SanitizeSymlinkTarget(entry.LinkTarget ?? ""),
+                        Permissions = FsPermissionUtil.FromUnixMode(entry.Mode & 0x1FF),
+                        UserId = entry.UserId,
+                        GroupId = entry.GroupId,
+                        Size = entry.LinkTarget?.Length ?? 0,
                     };
+
                     AddNode(fullPath, inode);
-                    offset = Align512(offset + (int)size);
+                    createdNodes[fullPath] = inode;
+                    break;
+                }
+
+                case ArchiveEntryKind.HardLink:
+                {
+                    if (entry.LinkTarget == null)
                     continue;
-                
-                case '0':
-                case '\0':
+
+                    string targetPath = NormalizePath(entry.LinkTarget);
+
+                    if (!createdNodes.TryGetValue(targetPath, out var targetInode))
+                    {
+                        // fallback: create empty file (should not normally happen)
+                        targetInode = new Inode(FsNodeKind.File)
+                        {
+                            Data = Array.Empty<byte>()
+                        };
+                    }
+
+                    AddNode(fullPath, targetInode);
+                    createdNodes[fullPath] = targetInode;
+                    break;
+                }
+
+                case ArchiveEntryKind.File:
+                default:
+                {
                     inode = new Inode(FsNodeKind.File)
                     {
-                        Data = tarBytes[offset..(offset + (int)size)],
-                        Permissions = FsPermissionUtil.FromUnixMode(mode & 0x1FF),
-                        UserId = uid,
-                        GroupId = gid,
-                        Size = size,
+                        Data = entry.Data ?? [],
+                        Permissions = FsPermissionUtil.FromUnixMode(entry.Mode & 0x1FF),
+                        UserId = entry.UserId,
+                        GroupId = entry.GroupId,
+                        Size = entry.Size,
                     };
+
                     AddNode(fullPath, inode);
-                    offset = Align512(offset + (int)size);
-                    continue;
-                default:
-                    offset = Align512(offset + (int)size);
-                    continue;
+                    createdNodes[fullPath] = inode;
+                    break;
+                }
             }
         }
     }
@@ -200,26 +225,6 @@ public sealed class InitRamFs : IVfsBackend
         }
 
         return current;
-    }
-
-    private static int Align512(int value) => (value + 511) / 512 * 512;
-
-    private static bool IsAllZero(byte[] data, int offset, int count)
-    {
-        for (int i = 0; i < count; i++)
-            if (data[offset + i] != 0) return false;
-        return true;
-    }
-
-    private static string ReadAscii(byte[] data, int offset, int length)
-    {
-        return Encoding.ASCII.GetString(data, offset, length).TrimEnd('\0');
-    }
-
-    private static long ReadOctal(byte[] data, int offset, int length)
-    {
-        string str = ReadAscii(data, offset, length).Trim();
-        return str.Length == 0 ? 0 : Convert.ToInt64(str, 8);
     }
 
     private static string NormalizePath(string path)

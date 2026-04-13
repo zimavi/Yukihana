@@ -27,20 +27,30 @@ public class Kernel : Sys.Kernel
     public static bool SpeedrunShutdown { get; set; } = false;
 
     public static Kernel Instance { get; private set; } = null!;
-    public static DateTime BootTime { get; } = DateTime.Now;
+    public static DateTime BootTime { get; }
 
     private static readonly string _ramfs_namespace = "Yukihana";
     private static readonly string _ramfs_subfolders = "Core.Resources";
-    private static readonly string _ramfs_file = "initramfs.tar.gz";
+    private static readonly string _ramfs_file = "initramfs.cpio.gz";
 
     private static string _ramfs_resource_key => string.Join('.', _ramfs_namespace, _ramfs_subfolders, _ramfs_file);
 
-    private static Logger _kernelLogger = new();
+    private static readonly Logger _kernelLogger;
+
+    static Kernel()
+    {
+        BootTime = DateTime.Now;
+        _kernelLogger = new();
+        _kernelLogger.Info("Static Kernel constructor called");
+        _kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
+    }
 
     protected override void BeforeRun()
     {
         try
         {
+            Instance = this;
+            KernelLog.LogToScreen = true;
             Init();
         }
         catch (Exception ex)
@@ -54,8 +64,6 @@ public class Kernel : Sys.Kernel
         //
         // STAGE 1 -> Early boot
         //
-
-        Instance = this;
         
         var logger = new Logger("init");
 
@@ -73,7 +81,7 @@ public class Kernel : Sys.Kernel
         }
 
         logger.Info("Loading initramfs.");
-        var initramfs = new InitRamFs(ramfsBytes);
+        var initramfs = new InitRamFs(ramfsBytes, InitRamFsArchive.Cpio);
 
         logger.Info("Mounting initramfs as root.");
         VFS.Mount("/", initramfs);
