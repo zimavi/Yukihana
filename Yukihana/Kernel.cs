@@ -23,23 +23,20 @@ public class Kernel : Sys.Kernel
 {
     public static AuthService AuthService { get; private set; } = null!;
     public static UserSession UserSession { get; private set; } = null!;
-    
-    public static bool SpeedrunShutdown { get; set; } = false;
 
-    public static Kernel Instance { get; private set; } = null!;
     public static DateTime BootTime { get; }
 
-    private static readonly string _ramfs_namespace = "Yukihana";
-    private static readonly string _ramfs_subfolders = "Core.Resources";
-    private static readonly string _ramfs_file = "initramfs.cpio.gz";
+    private const string RAMFS_PATH = "Yukihana.Core.Resources";
+    private const string RAMFS_FILE = "initramfs.cpio.gz";
 
-    private static string _ramfs_resource_key => string.Join('.', _ramfs_namespace, _ramfs_subfolders, _ramfs_file);
+    private static string _ramfs_resource_key => string.Join('.', RAMFS_PATH, RAMFS_FILE);
 
     private static readonly Logger _kernelLogger;
 
     static Kernel()
     {
         BootTime = DateTime.Now;
+
         _kernelLogger = new();
         _kernelLogger.Info("Static Kernel constructor called");
         _kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
@@ -49,7 +46,6 @@ public class Kernel : Sys.Kernel
     {
         try
         {
-            Instance = this;
             KernelLog.LogToScreen = true;
             Init();
         }
@@ -67,7 +63,7 @@ public class Kernel : Sys.Kernel
         
         var logger = new Logger("init");
 
-        logger.Info($"Fetching \"{_ramfs_file}\".");
+        logger.Info($"Fetching \"{RAMFS_FILE}\".");
         byte[] ramfsBytes;
 
         var assembly = Assembly.GetExecutingAssembly();
@@ -75,13 +71,13 @@ public class Kernel : Sys.Kernel
         using (var result = assembly.GetManifestResourceStream(_ramfs_resource_key).ToOption())
         using (var memStream = new MemoryStream())
         {
-            var stream = result.OrPanic($"Cannot localte \"{_ramfs_file}\".");
+            var stream = result.OrPanic($"Unable to locate \"{RAMFS_FILE}\".");
             stream.CopyTo(memStream);
             ramfsBytes = memStream.ToArray();
         }
 
         logger.Info("Loading initramfs.");
-        var initramfs = new InitRamFs(ramfsBytes, InitRamFsArchive.Cpio);
+        var initramfs = new InitRamFs(ramfsBytes);
 
         logger.Info("Mounting initramfs as root.");
         VFS.Mount("/", initramfs);
@@ -166,8 +162,6 @@ public class Kernel : Sys.Kernel
     protected override void AfterRun()
     {
         Console.WriteLine("\n");
-        if (SpeedrunShutdown)
-            return;
         
         _kernelLogger.Info("Reached AfterRun().");
 

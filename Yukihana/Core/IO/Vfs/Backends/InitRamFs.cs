@@ -86,7 +86,7 @@ public sealed class InitRamFs : IVfsBackend
 
     private readonly Inode _root = new(FsNodeKind.Directory);
 
-    public InitRamFs(byte[] compressedArchive, InitRamFsArchive archiveType)
+    public InitRamFs(byte[] compressedArchive)
     {
         ArgumentNullException.ThrowIfNull(compressedArchive);
 
