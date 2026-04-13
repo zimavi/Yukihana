@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Cosmos.Kernel.Core.IO;
+using Cosmos.Kernel.HAL;
 
 namespace Yukihana.Core.Debug;
 
@@ -30,12 +31,20 @@ public static class KernelPanic
         for (int i = start; i < logs.Count; i++)
         {
             var e = logs[i];
-            Console.WriteLine($"[{e.Time:0.000}] {e.Source}: {e.Message}");
+            var delta = e.Time - Kernel.BootTime;
+            Console.WriteLine($"[{delta.TotalSeconds,10:0.000000}] {e.Source}: {e.Message}");
         }
 
         MirrorToSerial(reason, m, f, l);
 
         Print("\nSystem halted.", ConsoleColor.Red);
+
+
+        if (PlatformHAL.CpuOps != null)
+        {
+            PlatformHAL.CpuOps.DisableInterrupts();
+            PlatformHAL.CpuOps.Halt();
+        }
 
         for (;;);
     }
@@ -55,7 +64,8 @@ public static class KernelPanic
 
         foreach (var e in KernelLog.Entries)
         {
-            Serial.WriteString($"[{e.Time:0.000}] {e.Source}: {e.Message}\n");
+            var delta = e.Time - Kernel.BootTime;
+            Serial.WriteString($"[{delta.TotalSeconds,10:0.000000}] {e.Source}: {e.Message}\n");
         }
     }
 }
