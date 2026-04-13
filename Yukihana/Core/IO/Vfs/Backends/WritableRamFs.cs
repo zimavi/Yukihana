@@ -8,7 +8,7 @@ using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO.Vfs.Backends;
 
-public sealed class TempFs : IVfsBackend
+public sealed class TempFs(ulong totalBytes) : IVfsBackend
 {
     private sealed class Node
     {
@@ -54,20 +54,24 @@ public sealed class TempFs : IVfsBackend
 
         public int Read(long position, Span<byte> buffer)
         {
-            byte[] data = _node.Data ?? Array.Empty<byte>();
-
-            if (position < 0 || position > data.LongLength)
+            if (position < 0)
                 throw new ArgumentOutOfRangeException(nameof(position));
-            
-            if (buffer.Length == 0)
+
+            if (buffer.IsEmpty)
                 return 0;
 
-            int remaining = data.Length - (int)position;
-            if (remaining <= 0 || buffer.Length == 0)
+            byte[] data = _node.Data ?? Array.Empty<byte>();
+
+            if (position > int.MaxValue || position >= data.LongLength)
+                return 0;
+
+            int offset = (int)position;
+            int remaining = data.Length - offset;
+            if (remaining <= 0)
                 return 0;
 
             int toCopy = Math.Min(remaining, buffer.Length);
-            new ReadOnlySpan<byte>(data, (int)position, toCopy).CopyTo(buffer);
+            data.AsSpan(offset, toCopy).CopyTo(buffer);
             return toCopy;
         }
 
@@ -87,22 +91,14 @@ public sealed class TempFs : IVfsBackend
     private const ulong DEFAULT_CAPACITY_BYTES = 64 * 1024 * 1024; // 64 MiB
 
     private readonly Node _root = new(FsNodeKind.Directory);
-    private ulong _totalBytes;
+    private ulong _totalBytes = totalBytes;
     private long _usedBytes;
 
     public TempFs() : this(DEFAULT_CAPACITY_BYTES)
     { }
 
-    public TempFs(ulong totalBytes)
-    {
-        _totalBytes = totalBytes;
-    }
-
-    public bool Exists(string path)
-    {
-        path = FsPath.NormalizeRelative(path);
-        return FindExactNode(path) is not null;
-    }
+    public bool Exists(string path) =>
+        FindExactNode(FsPath.NormalizeRelative(path)) is not null;
 
     public FsNodeKind GetKind(string path)
     {
@@ -114,10 +110,9 @@ public sealed class TempFs : IVfsBackend
 
     public bool TryReadLink(string path, out string target)
     {
-        path = FsPath.NormalizeRelative(path);
         target = string.Empty;
 
-        var node = FindExactNode(path);
+        var node = FindExactNode(FsPath.NormalizeRelative(path));
         if (node is null)
             return false;
 
@@ -125,15 +120,12 @@ public sealed class TempFs : IVfsBackend
             return false;
 
         target = node.LinkTarget;
-
         return true;
     }
 
     public bool TryGetMetadata(string path, out VfsMetadata metadata)
     {
-        path = FsPath.NormalizeRelative(path);
-
-        var node = FindExactNode(path);
+        var node = FindExactNode(FsPath.NormalizeRelative(path));
         if (node is null)
         {
             metadata = default;
@@ -147,14 +139,13 @@ public sealed class TempFs : IVfsBackend
 
     public VfsSpaceInfo GetSpaceInfo()
     {
-        ulong used = _usedBytes <= 0 ? 0 : (ulong)_usedBytes;
-
+        ulong used = _usedBytes <= 0 ? 0UL : (ulong)_usedBytes;
         return new VfsSpaceInfo(_totalBytes, used);
     }
 
     public Option<KernelError> ResizeSpace(ulong totalBytes)
     {
-        ulong used = _usedBytes <= 0 ? 0 : (ulong)_usedBytes;
+        ulong used = _usedBytes <= 0 ? 0UL : (ulong)_usedBytes;
 
         if (totalBytes < used)
             return Option<KernelError>.Some(KernelError.InvalidOp(
@@ -175,8 +166,8 @@ public sealed class TempFs : IVfsBackend
         if (node.Kind != FsNodeKind.File)
             return Result<byte[], KernelError>.Failure(KernelError.InvalidOp($"Path is not a regular file: {path}"));
 
-        byte[] data = node.Data ?? Array.Empty<byte>();
-        var copy = new byte[data.Length];
+        byte[] data = node.Data ?? [];
+        byte[] copy = new byte[data.Length];
         Buffer.BlockCopy(data, 0, copy, 0, data.Length);
         return copy;
     }
@@ -206,11 +197,10 @@ public sealed class TempFs : IVfsBackend
         if (append && !needsWrite)
             return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Append requires write access: {path}"));
 
-        var parentPath = FsPath.GetParent(path);
-        if (createMissing || truncateExisting || append || mode == FileMode.CreateNew)
+        if (createMissing || truncateExisting || append)
         {
-            var ensure = TryEnsureDirectory(parentPath, recursive: true, out var dirError);
-            if (!ensure)
+            string parentPath = FsPath.GetParent(path);
+            if (!TryEnsureDirectory(parentPath, recursive: true, out var dirError))
                 return Result<Stream, KernelError>.Failure(dirError);
         }
 
@@ -226,18 +216,21 @@ public sealed class TempFs : IVfsBackend
             case FileMode.CreateNew:
                 if (node is not null)
                     return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"File already exists: {path}"));
+
                 node = CreateEmptyFileNode(path);
                 break;
 
             case FileMode.Create:
                 if (node is null)
+                {
                     node = CreateEmptyFileNode(path);
+                }
                 else
                 {
                     if (node.Kind != FsNodeKind.File)
                         return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a file: {path}"));
-                    
-                    if (!TryUpdateLeaf(node, FsNodeKind.File, Array.Empty<byte>(), null, 0, out var fileError))
+
+                    if (!TryReplaceLeaf(node, FsNodeKind.File, Array.Empty<byte>(), null, 0, out var fileError))
                         return Result<Stream, KernelError>.Failure(fileError);
                 }
                 break;
@@ -250,10 +243,11 @@ public sealed class TempFs : IVfsBackend
             case FileMode.Truncate:
                 if (node is null)
                     return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
+
                 if (node.Kind != FsNodeKind.File)
                     return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a file: {path}"));
 
-                if (!TryUpdateLeaf(node, FsNodeKind.File, Array.Empty<byte>(), null, 0, out var truncateError))
+                if (!TryReplaceLeaf(node, FsNodeKind.File, Array.Empty<byte>(), null, 0, out var truncateError))
                     return Result<Stream, KernelError>.Failure(truncateError);
                 break;
 
@@ -273,8 +267,7 @@ public sealed class TempFs : IVfsBackend
             return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a regular file: {path}"));
 
         long initialPosition = append ? node.OwnSize : 0;
-        var stream = new RamFsStream(new NodeBacking(this, node), access, share, initialPosition);
-        return stream;
+        return new RamFsStream(new NodeBacking(this, node), access, share, initialPosition);
     }
 
     public Option<KernelError> WriteAllBytes(string path, byte[] data)
@@ -294,27 +287,25 @@ public sealed class TempFs : IVfsBackend
         if (parent is null || parent.Kind != FsNodeKind.Directory)
             return Option<KernelError>.Some(KernelError.NotFound(parentPath));
 
+        byte[] copy = CloneBytes(data);
+
         if (parent.Children.TryGetValue(name, out var existing))
         {
             if (existing.Kind == FsNodeKind.Directory)
-                return Option<KernelError>.Some(KernelError.InvalidOp(
-                    $"Cannot overwrite directory with file: {path}"));
-            
-            var copy = new byte[data.Length];
-            Buffer.BlockCopy(data, 0, copy, 0, data.Length);
+            {
+                return Option<KernelError>.Some(
+                    KernelError.InvalidOp($"Cannot overwrite directory with file: {path}"));
+            }
 
-            if (!TryUpdateLeaf(existing, FsNodeKind.File, copy, null, copy.Length, out var error))
+            if (!TryReplaceLeaf(existing, FsNodeKind.File, copy, null, copy.Length, out var error))
                 return Option<KernelError>.Some(error);
-            
+
             return Option<KernelError>.None();
         }
 
-        var newData = new byte[data.Length];
-        Buffer.BlockCopy(data, 0, newData, 0, data.Length);
-
-        if(!TryCreateLeaf(parent, name, CreateFileLeaf(newData), out var createError))
+        if (!TryCreateLeaf(parent, name, CreateFileLeaf(copy), out var createError))
             return Option<KernelError>.Some(createError);
-        
+
         return Option<KernelError>.None();
     }
 
@@ -325,10 +316,9 @@ public sealed class TempFs : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.None();
 
-        if (!TryEnsureDirectory(path, recursive, out var error))
-            return Option<KernelError>.Some(error);
-
-        return Option<KernelError>.None();
+        return TryEnsureDirectory(path, recursive, out var error)
+            ? Option<KernelError>.None()
+            : Option<KernelError>.Some(error);
     }
 
     public Option<KernelError> CreateSymbolicLink(string path, string target)
@@ -351,32 +341,27 @@ public sealed class TempFs : IVfsBackend
 
         long targetSize = Encoding.UTF8.GetByteCount(target);
 
-        if(parent.Children.TryGetValue(name, out var existing))
+        if (parent.Children.TryGetValue(name, out var existing))
         {
             if (existing.Kind == FsNodeKind.Directory)
-                return Option<KernelError>.Some(KernelError.InvalidOp(
-                    $"Cannot overwrite directory with symlink: {path}"));
+            {
+                return Option<KernelError>.Some(
+                    KernelError.InvalidOp($"Cannot overwrite directory with symlink: {path}"));
+            }
 
-            if(!TryUpdateLeaf(existing, FsNodeKind.SymbolicLink, null, target, targetSize, out var error))
+            if (!TryReplaceLeaf(existing, FsNodeKind.SymbolicLink, null, target, targetSize, out var error))
                 return Option<KernelError>.Some(error);
-            
+
             return Option<KernelError>.None();
         }
 
         if (targetSize > (long)FreeBytes)
             return Option<KernelError>.Some(KernelError.NoSpaceLeft());
 
-        var node = new Node(FsNodeKind.SymbolicLink)
-        {
-            LinkTarget = target,
-            OwnSize = targetSize,
-            SubtreeSize = targetSize,
-            Permissions = FsPermissionUtil.DefaultSymbolic,
-            UserId = VFS.CurrentCredentials.UserId,
-            GroupId = VFS.CurrentCredentials.GroupId,
-        };
+        var node = CreateSymlinkLeaf(target, targetSize);
+        if (!TryCreateLeaf(parent, name, node, out var createError))
+            return Option<KernelError>.Some(createError);
 
-        AddChild(parent, name, node);
         return Option<KernelError>.None();
     }
 
@@ -387,7 +372,7 @@ public sealed class TempFs : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot delete the root directory."));
 
-        var parentPath = FsPath.GetParent(path);
+        string parentPath = FsPath.GetParent(path);
         var parent = FindExactNode(parentPath);
 
         if (parent is null || parent.Kind != FsNodeKind.Directory)
@@ -396,7 +381,7 @@ public sealed class TempFs : IVfsBackend
         string name = FsPath.GetFileName(path);
         if (!parent.Children.TryGetValue(name, out var node))
             return Option<KernelError>.Some(KernelError.NotFound(path));
-        
+
         BubbleSubtreeDelta(parent, -node.SubtreeSize);
         parent.Children.Remove(name);
         node.Parent = null;
@@ -441,21 +426,19 @@ public sealed class TempFs : IVfsBackend
             throw new DirectoryNotFoundException(parentPath);
 
         string name = FsPath.GetFileName(path);
-
-        var node = new Node(FsNodeKind.File)
-        {
-            UserId = VFS.CurrentCredentials.UserId,
-            GroupId = VFS.CurrentCredentials.GroupId,
-            Data = [],
-            OwnSize = 0,
-            SubtreeSize = 0
-        };
-        
-        AddChild(parent, name, node);
+        var node = CreateFileLeaf(Array.Empty<byte>());
+        AttachChild(parent, name, node);
         return node;
     }
 
-    private Node CreateFileLeaf(byte[] data)
+    private static byte[] CloneBytes(byte[] data)
+    {
+        byte[] copy = new byte[data.Length];
+        Buffer.BlockCopy(data, 0, copy, 0, data.Length);
+        return copy;
+    }
+
+    private static Node CreateFileLeaf(byte[] data)
     {
         return new Node(FsNodeKind.File)
         {
@@ -463,7 +446,19 @@ public sealed class TempFs : IVfsBackend
             OwnSize = data.Length,
             SubtreeSize = data.Length,
             UserId = VFS.CurrentCredentials.UserId,
-            GroupId = VFS.CurrentCredentials.GroupId
+            GroupId = VFS.CurrentCredentials.GroupId,
+        };
+    }
+
+    private static Node CreateSymlinkLeaf(string target, long targetSize)
+    {
+        return new Node(FsNodeKind.SymbolicLink)
+        {
+            LinkTarget = target,
+            OwnSize = targetSize,
+            SubtreeSize = targetSize,
+            UserId = VFS.CurrentCredentials.UserId,
+            GroupId = VFS.CurrentCredentials.GroupId,
         };
     }
 
@@ -472,10 +467,9 @@ public sealed class TempFs : IVfsBackend
         if (node.Kind != FsNodeKind.File)
             throw new IOException("Path is not a regular file.");
 
-        if (position < 0)
-            throw new ArgumentOutOfRangeException(nameof(position));
+        ArgumentOutOfRangeException.ThrowIfNegative(position);
 
-        if (buffer.Length == 0)
+        if (buffer.IsEmpty)
             return;
 
         long required = checked(position + buffer.Length);
@@ -490,7 +484,7 @@ public sealed class TempFs : IVfsBackend
             long delta = newLength - oldLength;
             EnsureCanAllocate(delta);
 
-            var grown = new byte[newLength];
+            byte[] grown = new byte[newLength];
             if (oldLength != 0 && node.Data is not null)
                 Buffer.BlockCopy(node.Data, 0, grown, 0, oldLength);
 
@@ -501,10 +495,9 @@ public sealed class TempFs : IVfsBackend
             return;
         }
 
-        byte[] data = node.Data ?? Array.Empty<byte>();
+        byte[] data = node.Data ?? [];
         buffer.CopyTo(data.AsSpan((int)position, buffer.Length));
-        if (node.Data is null)
-            node.Data = data;
+        node.Data ??= data;
     }
 
     private void SetFileLength(Node node, long length)
@@ -512,8 +505,7 @@ public sealed class TempFs : IVfsBackend
         if (node.Kind != FsNodeKind.File)
             throw new IOException("Path is not a regular file.");
 
-        if (length < 0)
-            throw new ArgumentOutOfRangeException(nameof(length));
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
 
         if (length > int.MaxValue)
             throw new IOException("File too large.");
@@ -528,7 +520,7 @@ public sealed class TempFs : IVfsBackend
         if (delta > 0)
             EnsureCanAllocate(delta);
 
-        byte[] resized = newLength == 0 ? Array.Empty<byte>() : new byte[newLength];
+        byte[] resized = newLength == 0 ? [] : new byte[newLength];
         if (oldLength != 0 && node.Data is not null)
             Buffer.BlockCopy(node.Data, 0, resized, 0, Math.Min(oldLength, newLength));
 
@@ -537,7 +529,7 @@ public sealed class TempFs : IVfsBackend
         BubbleSubtreeDelta(node, delta);
     }
 
-    private bool TryUpdateLeaf(
+    private bool TryReplaceLeaf(
         Node node,
         FsNodeKind newKind,
         byte[]? newData,
@@ -584,13 +576,11 @@ public sealed class TempFs : IVfsBackend
             return false;
         }
 
-        child.Parent = parent;
-        parent.Children.Add(name, child);
-        BubbleSubtreeDelta(parent, child.SubtreeSize);
+        AttachChild(parent, name, child);
         return true;
     }
 
-    private void AddChild(Node parent, string name, Node child)
+    private void AttachChild(Node parent, string name, Node child)
     {
         child.Parent = parent;
         parent.Children.Add(name, child);
@@ -660,8 +650,8 @@ public sealed class TempFs : IVfsBackend
             return true;
         }
 
-        var parts = FsPath.SplitRelative(path);
-        var current = _root;
+        string[] parts = FsPath.SplitRelative(path);
+        Node current = _root;
         string currentPath = string.Empty;
 
         for (int i = 0; i < parts.Length; i++)
@@ -677,8 +667,12 @@ public sealed class TempFs : IVfsBackend
                     return false;
                 }
 
-                next = new Node(FsNodeKind.Directory);
-                current.Children[segment] = next;
+                next = new Node(FsNodeKind.Directory)
+                {
+                    Parent = current
+                };
+
+                current.Children.Add(segment, next);
             }
             else if (next.Kind != FsNodeKind.Directory)
             {
