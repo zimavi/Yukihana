@@ -12,6 +12,9 @@ public static class KernelLog
     public static IReadOnlyList<LogEntry> Entries => _entries;
     public static LogLevel SerialLevel = LogLevel.Info;
 
+    public static bool LogToScreen = false;
+    public static bool LogToUart = true;
+
     public static void Write(
         LogLevel level,
         string source,
@@ -31,10 +34,11 @@ public static class KernelLog
 
         _entries.Add(entry);
 
-        if (level >= SerialLevel)
+        if (level >= SerialLevel && LogToUart)
             Serial.WriteString(FormatForSerial(entry) + "\n");
 
-        ConsoleRenderer.Render(entry);
+        if (LogToScreen)
+            ConsoleRenderer.Render(entry);
     }
 
     private static string FormatForSerial(LogEntry e)

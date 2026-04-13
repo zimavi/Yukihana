@@ -14,7 +14,7 @@ public sealed class Bzip2ArchiveCompressor : IArchiveCompressor
 
     public byte[] Compress(byte[] data, int level = 6)
     {
-        using var srcStream = new MemoryStream(data);
+        using var srcStream = new MemoryStream(data, writable: false);
         using var dstStream = new MemoryStream();
 
         BZip2.Compress(srcStream, dstStream, isStreamOwner: false, level);
@@ -24,7 +24,7 @@ public sealed class Bzip2ArchiveCompressor : IArchiveCompressor
 
     public byte[] Decompress(byte[] data)
     {
-        using var srcStream = new MemoryStream(data);
+        using var srcStream = new MemoryStream(data, writable: false);
         using var dstStream = new MemoryStream();
 
         BZip2.Decompress(srcStream, dstStream, isStreamOwner: false);

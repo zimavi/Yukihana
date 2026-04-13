@@ -51,7 +51,7 @@ public sealed class OptionalResourceGroup<TState>
 
         foreach(var member in _members)
         {
-            logger.Info($"Loading \"'{member.Description}\" for group \"{_name}\"");
+            logger.Info($"Loading \"{member.Description}\" for group \"{_name}\"");
 
             Option<byte[]> result = _provider.TryLoad(member.Path);
 

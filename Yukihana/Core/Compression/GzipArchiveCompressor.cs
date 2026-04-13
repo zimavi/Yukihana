@@ -23,7 +23,7 @@ public sealed class GzipArchiveCompressor : IArchiveCompressor
 
     public byte[] Compress(byte[] data, int level = 6)
     {
-        using var srcStream = new MemoryStream(data);
+        using var srcStream = new MemoryStream(data, writable: false);
         using var dstStream = new MemoryStream();
 
         GZip.Compress(srcStream, dstStream, isStreamOwner: false, level);
@@ -33,7 +33,7 @@ public sealed class GzipArchiveCompressor : IArchiveCompressor
 
     public byte[] Decompress(byte[] data)
     {
-        using var srcStream = new MemoryStream(data);
+        using var srcStream = new MemoryStream(data, writable: false);
         using var dstStream = new MemoryStream();
 
         GZip.Decompress(srcStream, dstStream, isStreamOwner: false);
