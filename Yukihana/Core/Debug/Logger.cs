@@ -5,14 +5,12 @@ using System.Runtime.CompilerServices;
 
 namespace Yukihana.Core.Debug;
 
-public sealed class Logger
+public sealed class Logger(string source)
 {
-    private readonly string _source;
+    private readonly string _source = source;
 
-    public Logger(string source)
-    {
-        _source = source;
-    }
+    public Logger() : this(string.Empty)
+    { }
 
     public void Info(string msg,
         [CallerMemberName] string m = "",

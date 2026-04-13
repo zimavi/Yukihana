@@ -40,6 +40,8 @@ public static class KernelLog
     private static string FormatForSerial(LogEntry e)
     {
         var delta = e.Time - Kernel.BootTime;
-        return $"[{delta.TotalSeconds,10:0.000000}] [{e.Level}] {e.Source}: {e.Message}";
+        return string.IsNullOrWhiteSpace(e.Source)
+            ? $"[{delta.TotalSeconds,10:0.000000}] [{e.Level}] {e.Message}"
+            : $"[{delta.TotalSeconds,10:0.000000}] [{e.Level}] {e.Source}: {e.Message}";
     }
 }

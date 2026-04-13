@@ -24,8 +24,11 @@ public static class ConsoleRenderer
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.Write($"[{delta.TotalSeconds,10:0.000000}] ");
 
-        Console.ForegroundColor = GetColor(e.Level);
-        Console.Write($"{e.Source}: ");
+        if (!string.IsNullOrWhiteSpace(e.Source))
+        {
+            Console.ForegroundColor = GetColor(e.Level);
+            Console.Write($"{e.Source}: ");
+        }
 
         Console.ForegroundColor = ConsoleColor.Gray;
         Console.WriteLine(e.Message);
@@ -36,7 +39,10 @@ public static class ConsoleRenderer
     private static void RenderSystemd(LogEntry e)
     {
         Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine($"          {e.Source}: {e.Message}");
+        if (string.IsNullOrWhiteSpace(e.Source))
+            Console.WriteLine($"          {e.Message}");
+        else
+            Console.WriteLine($"          {e.Source}: {e.Message}");
         Console.ResetColor();
     }
 
