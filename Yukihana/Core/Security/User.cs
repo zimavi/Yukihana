@@ -11,6 +11,8 @@ public record User(
     string Shell,
     string PasswordHash)
 {
+    public IReadOnlyCollection<int> SecondaryGroupIds { get; init; } = [];
+
     public static readonly User None = new(
         Id: -1,
         Name: "nobody",
@@ -18,7 +20,7 @@ public record User(
         HomeDirectory: "/nonexistent",
         Shell: "nologin",
         PasswordHash: string.Empty);
-    
+
     public static readonly User Guest = new(
         Id: 65534,
         Name: "guest",
@@ -26,4 +28,23 @@ public record User(
         HomeDirectory: "/tmp",
         Shell: "restricted-shell",
         PasswordHash: string.Empty);
+
+    public bool IsInGroup(int groupId) =>
+        groupId == PrimaryGroupId || SecondaryGroupIds.Contains(groupId);
+
+    public IEnumerable<int> GetAllGroupIds()
+    {
+        yield return PrimaryGroupId;
+
+        foreach(var groupId in SecondaryGroupIds)
+        {
+            if (groupId != PrimaryGroupId)
+                yield return groupId;
+        }
+    }
+
+    public User WithSecondaryGroups(IEnumerable<int> groupIds) => this with
+    {
+        SecondaryGroupIds = [.. groupIds.Where(id => id >= 0).Distinct()]
+    };
 }

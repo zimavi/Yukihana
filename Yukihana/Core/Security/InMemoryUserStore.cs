@@ -7,10 +7,10 @@ namespace Yukihana.Core.Security;
 
 public sealed class InMemoryUserStore : IUserStore
 {
-    private readonly Dictionary<int, User> _usersById = new();
+    private readonly Dictionary<int, User> _usersById = [];
     private readonly Dictionary<string, User> _usersByName = new(StringComparer.Ordinal);
 
-    private readonly Dictionary<int, Group> _groupsById = new();
+    private readonly Dictionary<int, Group> _groupsById = [];
     private readonly Dictionary<string, Group> _groupsByName = new(StringComparer.Ordinal);
 
     public Option<User> GetUserById(int id)
@@ -39,21 +39,64 @@ public sealed class InMemoryUserStore : IUserStore
         return Option<Group>.None();
     }
 
-    public IEnumerable<User> GetAllUsers() => _usersById.Values;
-    public IEnumerable<Group> GetAllGroups() => _groupsById.Values;
+    public IEnumerable<User> GetAllUsers() => _usersById.Values.OrderBy(user => user.Id);
+    public IEnumerable<Group> GetAllGroups() => _groupsById.Values.OrderBy(group => group.Id);
 
     public void AddUser(User user)
     {
+        if (_usersById.TryGetValue(user.Id, out var existing))
+        {
+            _usersByName.Remove(existing.Name);
+            RemoveUserFromAllGroups(existing);
+        }
+
         _usersById[user.Id] = user;
         _usersByName[user.Name] = user;
 
-        if(_groupsById.TryGetValue(user.PrimaryGroupId, out var group))
-            group.AddMember(user.Id);
+        AddUserToAllKnownGroups(user);
     }
 
     public void AddGroup(Group group)
     {
+        if (_groupsById.TryGetValue(group.Id, out var existing))
+            _groupsByName.Remove(existing.Name);
+
         _groupsById[group.Id] = group;
         _groupsByName[group.Name] = group;
+
+        SyncGroupMembersFromUsers(group);
+    }
+
+    private void AddUserToAllKnownGroups(User user)
+    {
+        if (_groupsById.TryGetValue(user.PrimaryGroupId, out var primaryGroup))
+            primaryGroup.AddMember(user.Id);
+
+        foreach (var secondaryGroupId in user.SecondaryGroupIds.Distinct())
+        {
+            if (_groupsById.TryGetValue(secondaryGroupId, out var group))
+                group.AddMember(user.Id);
+        }
+    }
+
+    private void RemoveUserFromAllGroups(User user)
+    {
+        if (_groupsById.TryGetValue(user.PrimaryGroupId, out var primaryGroup))
+            primaryGroup.RemoveMember(user.Id);
+
+        foreach (var secondaryGroupId in user.SecondaryGroupIds.Distinct())
+        {
+            if (_groupsById.TryGetValue(secondaryGroupId, out var group))
+                group.RemoveMember(user.Id);
+        }
+    }
+
+    private void SyncGroupMembersFromUsers(Group group)
+    {
+        foreach (var user in _usersById.Values)
+        {
+            if (user.PrimaryGroupId == group.Id || user.SecondaryGroupIds.Contains(group.Id))
+                group.AddMember(user.Id);
+        }
     }
 }

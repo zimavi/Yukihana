@@ -144,6 +144,18 @@ public static partial class VFS
         return !resolved.IsFailure && resolved.Value.Kind != FsNodeKind.Missing;
     }
 
+    public static bool FileExists(string path)
+    {
+        var resolved = ResolvePath(path, followFinalSymlink: true);
+        return resolved.IsSuccess && resolved.Value.Kind == FsNodeKind.File;
+    }
+
+    public static bool DirectoryExists(string path)
+    {
+        var resolved = ResolvePath(path, followFinalSymlink: true);
+        return resolved.IsSuccess && resolved.Value.Kind == FsNodeKind.Directory;
+    }
+
     public static FsNodeKind GetKind(string path)
     {
         var resolved = ResolvePath(path, followFinalSymlink: false);

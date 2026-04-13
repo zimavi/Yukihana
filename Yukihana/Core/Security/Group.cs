@@ -11,6 +11,17 @@ public sealed class Group (int id, string name)
     private readonly HashSet<int> _members = new();
     public IReadOnlyCollection<int> Members => _members;
 
+    public bool ContainsMember(int userId) => _members.Contains(userId);
+
     public void AddMember(int userId) => _members.Add(userId);
+
+    public void AddMembers(IEnumerable<int> userIds)
+    {
+        foreach (var userId in userIds)
+            _members.Add(userId);
+    }
+
     public void RemoveMember(int userId) => _members.Remove(userId);
+
+    public void ClearMembers() => _members.Clear();
 }

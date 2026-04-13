@@ -21,7 +21,7 @@ public static class UserSystemInitializer
             Name: "root",
             PrimaryGroupId: rootGroup.Id,
             HomeDirectory: "/root",
-            Shell: "yukihana-shell",
+            Shell: "yuki-shell",
             PasswordHash: PasswordHasher.Hash("root")
         );
 
@@ -30,8 +30,8 @@ public static class UserSystemInitializer
             Name: "yuki",
             PrimaryGroupId: usersGroup.Id,
             HomeDirectory: "/home/yuki",
-            Shell: "yukihana-shell",
-            PasswordHash: PasswordHasher.Hash("yuki-yuki")
+            Shell: "yuki-shell",
+            PasswordHash: PasswordHasher.Hash("yukiyuki")
         );
 
         store.AddUser(root);

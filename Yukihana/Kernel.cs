@@ -35,6 +35,8 @@ public class Kernel : Sys.Kernel
 
     private static string _ramfs_resource_key => string.Join('.', _ramfs_namespace, _ramfs_subfolders, _ramfs_file);
 
+    private static Logger _kernelLogger = new();
+
     protected override void BeforeRun()
     {
         try
@@ -57,7 +59,7 @@ public class Kernel : Sys.Kernel
         
         var logger = new Logger("init");
 
-        logger.Info($"Fetching \"{_ramfs_file}\"");
+        logger.Info($"Fetching \"{_ramfs_file}\".");
         byte[] ramfsBytes;
 
         var assembly = Assembly.GetExecutingAssembly();
@@ -65,15 +67,15 @@ public class Kernel : Sys.Kernel
         using (var result = assembly.GetManifestResourceStream(_ramfs_resource_key).ToOption())
         using (var memStream = new MemoryStream())
         {
-            var stream = result.OrPanic($"Cannot localte \"{_ramfs_file}\"");
+            var stream = result.OrPanic($"Cannot localte \"{_ramfs_file}\".");
             stream.CopyTo(memStream);
             ramfsBytes = memStream.ToArray();
         }
 
-        logger.Info("Loading initramfs");
+        logger.Info("Loading initramfs.");
         var initramfs = new InitRamFs(ramfsBytes);
 
-        logger.Info("Mounting initramfs as root");
+        logger.Info("Mounting initramfs as root.");
         VFS.Mount("/", initramfs);
 
         var fontGroup = new OptionalResourceGroup<FontState>(
@@ -93,48 +95,59 @@ public class Kernel : Sys.Kernel
             some =>
             {
                 KernelConsole.Default!.Font = some.Font;
-                logger.Info("Applyied font to console");
+                logger.Info("Applyied font to console.");
             },
             none: () => {}
         );
 
-        logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}");
-
-        BootEnvironment.Stage = BootStage.CoreInit;
-
-        UnitManager.Target("System Core Init");
-
-        //
-        // STAGE 2 -> Core init
-        //
-
-        logger.Info("Mounting partitions");
+        logger.Info("Mounting partitions.");
 
         VFS.Mount("/tmp", new TempFs());
         VFS.Mount("/var", new TempFs());
+
+        VFS.Mount("/root", new TempFs());
+        VFS.Mount("/home", new TempFs());
 
         VFS.Mount("/dev", new DevFs());
         VFS.Mount("/proc", new ProcFs());
 
         VFS.Mount("/etc", new TempFs());
 
-        using (var u = UnitManager.Start("Start", "auth.service"))
+        var store = UserSystemInitializer.CreateDefault();
+
+        if (!VFS.FileExists("/etc/passwd") || !VFS.FileExists("/etc/shadow") || !VFS.FileExists("/etc/group"))
         {
-            AuthService = new AuthService(UserSystemInitializer.CreateDefault());
-            u.Ok();
+            logger.Warn("Unable to locate user files. Trying to save defaults.");
+
+            var snapshot = IdentitySerializer.Serialize(store);
+
+            VFS.WriteAllText("/etc/passwd", snapshot.Passwd);
+            VFS.WriteAllText("/etc/shadow", snapshot.Shadow);
+            VFS.WriteAllText("/etc/group", snapshot.Group);
         }
-        
-        using (var u = UnitManager.Start("Start", "User Session"))
+        else
         {
-            UserSession = new UserSession(User.None);
-            u.Ok();
+            var passwd = VFS.ReadAllText("/etc/passwd");
+            var shadow = VFS.ReadAllText("/etc/shadow");
+            var group = VFS.ReadAllText("/etc/group");
+
+            if (passwd.IsSuccess && shadow.IsSuccess && group.IsSuccess)
+            {
+                store = IdentitySerializer.Deserialize(
+                    passwd.Value,
+                    shadow.Value,
+                    group.Value);
+            }
+            else
+                logger.Warn("Unable to read user files. Using defaults.");
         }
 
-        UnitManager.Target("Default Target");
+        logger.Info("Initalizing user auth service and empty user session.");
 
-        Console.WriteLine("\nHello, from Yukihana OS! :D\n");
+        AuthService = new AuthService(store);
+        UserSession = new UserSession(User.None);
 
-        VFS.Remount("/", "/initrd", new TempFs());
+        logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}.");
         
         Stop();
     }
@@ -148,7 +161,9 @@ public class Kernel : Sys.Kernel
         if (SpeedrunShutdown)
             return;
         
-        UnitManager.Start("Finish", "System");
-        UnitManager.Target("System AfterRun");
+        _kernelLogger.Info("Reached AfterRun().");
+
+        _kernelLogger.Info("Kernel cleanup finished.");
+        _kernelLogger.Info("Bye.");
     }
 }
