@@ -1,0 +1,42 @@
+name: Build kernel
+
+on:
+    push:
+        branches:
+            - 'test/gen3'
+    pull_request:
+        branches:
+            - 'test/gen3'
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                dotnet-version: [10.0.*]
+        steps:
+            - name: 📥 Checkout repository
+              uses: actions/checkout@v6
+
+            - name: 🧰 Setup dotnet ${{ matrix.dotnet-version }}
+              uses: actions/setup-dotnet@v4
+              with:
+                dotnet-version: ${{ matrix.dotnet-version }}
+
+            - name: 🛣️ Add .NET tools to PATH
+              run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+            - name: 📦 Install Cosmos.Tools
+              run: dotnet tool install -g Cosmos.Tools
+
+            - name: ⚙️ Install Cosmos packages & dependencies
+              run: cosmos install -y
+
+            - name: 🧪 Build kernel (Debug)
+              working-directory: Yukihana
+              run: cosmos build -v --all
+
+            - name: 🚀 Build kernel (Release)
+              working-directory: Yukihana
+              run: cosmos build -v -c Release --all
