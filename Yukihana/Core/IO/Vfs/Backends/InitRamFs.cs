@@ -202,7 +202,7 @@ public sealed class InitRamFs : IVfsBackend
     {
         var parent = TraverseToParent(path, createMissing: true);
         string name = FsPath.GetFileName(path);
-        parent.Children[name] = node;
+        parent.Children?[name] = node;
     }
 
     private Inode TraverseToParent(string path, bool createMissing)
@@ -212,7 +212,10 @@ public sealed class InitRamFs : IVfsBackend
 
         foreach (var segment in segments)
         {
-            if(!current.Children.TryGetValue(segment, out var next))
+            // TODO: Improve children persistence checking
+            EnsureDirectory(current, segment);
+
+            if(!current.Children!.TryGetValue(segment, out var next))
             {
                 if (createMissing)
                 {
@@ -291,6 +294,12 @@ public sealed class InitRamFs : IVfsBackend
         return root.SubtreeSize;
     }
 
+    private static void EnsureDirectory(Inode node, string segment)
+    {
+        if (node.Kind != FsNodeKind.Directory || node.Children is null)
+                throw new InvalidOperationException($"{segment} is not a directory");
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public KernelError ReturnReadOnly() => KernelError.InvalidOp("Read-only filesystem.");
 
@@ -349,8 +358,12 @@ public sealed class InitRamFs : IVfsBackend
     {
         var current = _root;
         foreach (var seg in FsPath.SplitRelative(path))
-            if (!current.Children.TryGetValue(seg, out current))
+        {
+            // TODO: Improve children persistence checking
+            EnsureDirectory(current, seg);
+            if (!current.Children!.TryGetValue(seg, out current))
                 return null;
+        }
         return current;
     }
 
@@ -365,9 +378,14 @@ public sealed class InitRamFs : IVfsBackend
     public Result<string[], KernelError> List(string path)
     {
         var node = FindNode(path);
-        if (node is null) return Result<string[], KernelError>.Failure(KernelError.NotFound(path));
-        if (node.Kind != FsNodeKind.Directory) return Result<string[], KernelError>.Failure(KernelError.InvalidOp($"Not a directory: {path}"));
-        var items = node.Children.Keys.ToArray();
+
+        if (node is null) 
+            return Result<string[], KernelError>.Failure(KernelError.NotFound(path));
+        if (node.Kind != FsNodeKind.Directory) 
+            return Result<string[], KernelError>.Failure(KernelError.InvalidOp($"Not a directory: {path}"));
+
+        // TODO: Improve children persistence checking
+        var items = node.Children?.Keys.ToArray() ?? [];
         Array.Sort(items, StringComparer.Ordinal);
         return items;
     }
@@ -404,7 +422,7 @@ public sealed class InitRamFs : IVfsBackend
         if (node.Kind != FsNodeKind.File)
             return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Not a regular file: {path}"));
         
-        byte[] data = node.Data ?? Array.Empty<byte>();
+        byte[] data = node.Data ?? [];
         Stream stream = new RamFsStream(new ReadOnlyNodeBacking(data), access, share);
         return stream;
     }

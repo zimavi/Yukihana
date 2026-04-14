@@ -2,6 +2,7 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Reflection;
+using Cosmos.Kernel.Core.IO;
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Yukihana.Core.Debug;
@@ -16,8 +17,6 @@ using Yukihana.Core.Security;
 using Sys = Cosmos.Kernel.System;
 
 namespace Yukihana;
-
-delegate int TestDelegate(int a, int b);
 
 public class Kernel : Sys.Kernel
 {
@@ -51,7 +50,6 @@ public class Kernel : Sys.Kernel
         }
         catch
         {
-            _kernelLogger.Error("Unhandled exception at init. Panicking.");
             KernelPanic.Panic("Unhandled exception during boot");
         }
     }

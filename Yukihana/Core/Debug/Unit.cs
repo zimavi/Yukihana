@@ -9,8 +9,6 @@ public sealed class Unit : IDisposable
     private readonly string _target;
     private readonly int _indent;
 
-    private bool _done;
-
     internal Unit(string action, string target, int indent)
     {
         _action = action;
@@ -23,13 +21,11 @@ public sealed class Unit : IDisposable
     public void Ok()
     {
         PrintResult("OK", $"{Past(_action)} {_target}", ConsoleColor.Green);
-        _done = true;
     }
 
     public void Fail()
     {
         PrintResult("FAILED", $"Failed to {Present(_action)} {_target}", ConsoleColor.Red);
-        _done = true;
     }
 
     private void PrintStart()

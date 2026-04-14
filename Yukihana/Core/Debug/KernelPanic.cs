@@ -14,7 +14,6 @@ public static class KernelPanic
 {
     private static int _panicEntered;
 
-    [DoesNotReturn]
     public static void Panic(
         string reason,
         [CallerMemberName] string m = "",

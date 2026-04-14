@@ -14,8 +14,6 @@ public static partial class ExceptionExtensions
 {
     extension (Exception ex)
     {
-        [Obsolete("This function causes General Protection Fault", error: true)]
-        [DoesNotReturn]
         public void Panic(
             string? message = null,
             [CallerMemberName] string member = "",
@@ -23,8 +21,8 @@ public static partial class ExceptionExtensions
             [CallerLineNumber] int line = 0)
         {
             KernelPanic.Panic(
-                //BuildReason(ex, message),
-                $"{message}: {ex.Message}",
+                BuildReason(ex, message),
+                //$"{message}: {ex.Message}",
                 member,
                 file,
                 line);
@@ -33,7 +31,6 @@ public static partial class ExceptionExtensions
         }
 
         // This avoid allocations
-        [DoesNotReturn]
         public void PanicUnsafe(
             [CallerMemberName] string member = "",
             [CallerFilePath] string file = "",
@@ -43,8 +40,8 @@ public static partial class ExceptionExtensions
 
             try
             {
-                //reason = ex.GetType().FullName + ": " + ex.Message;
-                reason = $"<exception>: {ex.Message}";
+                reason = ex.GetType().FullName + ": " + ex.Message;
+                //reason = $"<exception>: {ex.Message}";
             }
             catch
             {
@@ -61,6 +58,7 @@ public static partial class ExceptionExtensions
     {
         try
         {
+            Serial.WriteString("Trying to build reason from exception\n");
             var sb = new StringBuilder(512);
 
             if (!string.IsNullOrWhiteSpace(message))
@@ -77,10 +75,12 @@ public static partial class ExceptionExtensions
         {
             try
             {
+                Serial.WriteString("Unable to format exception. Fallback to `type: msg`\n");
                 return ex.GetType().FullName + ": " + ex.Message;
             }
             catch
             {
+                Serial.WriteString("Skipping exception extraction\n");
                 return "Fatal exception (unprintable)";
             }
         }
@@ -88,13 +88,19 @@ public static partial class ExceptionExtensions
 
     private static void AppendException(StringBuilder sb, Exception ex, int depth)
     {
-        if (depth > 8) // prevent infinite recursion
+        Serial.WriteString("Extracting exception data\n");
+        if (depth > 8)
         {
             sb.Append("\n[Truncated exception chain]");
             return;
         }
 
-        sb.Append(ex.GetType().FullName);
+        Serial.WriteString("Extracting type\n");
+
+        var type = ex.GetType();
+
+        Serial.WriteString("Appending type name\n");
+        sb.Append(type.FullName);
         sb.Append(": ");
         sb.Append(ex.Message);
 
