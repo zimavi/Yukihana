@@ -1,12 +1,9 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Cosmos.Kernel.Core.IO;
 using Cosmos.Kernel.HAL;
-using Yukihana.Core.Generated;
 
 namespace Yukihana.Core.Debug;
 
@@ -28,8 +25,8 @@ public static class KernelPanic
         ConsoleRenderer.Enabled = true;
 
         Print("*** KERNEL PANIC ***", ConsoleColor.Red);
-        Print($"OS: {VersionInfo.OS_NAME} v{VersionInfo.OS_VERSION} ({VersionInfo.OS_REVISION})", ConsoleColor.Gray);
-        Print($"Kernel: {VersionInfo.KERNEL_NAME} v{VersionInfo.KERNEL_VERSION}", ConsoleColor.Gray);
+        Print($"Kernel: {KernelInfoString(VersionInfo.Kernel)}", ConsoleColor.Gray);
+        Print($"Framework: {FrameworkInfoString(VersionInfo.Framework)}", ConsoleColor.Gray);
         Print($"Reason: {reason}", ConsoleColor.White);
         Print($"At: {m} ({Path.GetFileName(f)}:{l})", ConsoleColor.Gray);
 
@@ -76,8 +73,8 @@ public static class KernelPanic
     private static void MirrorToSerial(string reason, string m, string f, int l, LogEntry[] logs)
     {
         Serial.WriteString("\n*** KERNEL PANIC ***\n");
-        Serial.WriteString($"OS: {VersionInfo.OS_NAME} {VersionInfo.OS_VERSION} ({VersionInfo.OS_REVISION})\n");
-        Serial.WriteString($"Kernel: {VersionInfo.KERNEL_NAME} {VersionInfo.KERNEL_VERSION}\n");
+        Serial.WriteString($"Kernel: {KernelInfoString(VersionInfo.Kernel)}\n");
+        Serial.WriteString($"Framework: {FrameworkInfoString(VersionInfo.Framework)}\n");
         Serial.WriteString($"Reason: {reason}\n");
         Serial.WriteString($"At: {m} ({Path.GetFileName(f)}:{l})\n");
 
@@ -89,4 +86,15 @@ public static class KernelPanic
     }
 
     private static LogEntry[] SnapshotLogs() => [..KernelLog.Entries];
+
+    // For some reason, using class' ToString causes kernel to freeze
+    private static string KernelInfoString(KernelInfo info)
+    {
+        return info.Name + " " + info.Version.ToString() + " (rev " + info.RevisionString + ")";
+    }
+
+    private static string FrameworkInfoString(FrameworkInfo info)
+    {
+        return info.Name + " " + info.Version.ToString();
+    }
 }

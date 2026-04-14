@@ -11,13 +11,14 @@
 
   <!-- Generate version info -->
   <PropertyGroup>
-    <Year>$([System.DateTime]::Now.ToString("yyyy"))</Year>
-    <Month>$([System.DateTime]::Now.ToString("MM"))</Month>
-    <Day>$([System.DateTime]::Now.ToString("dd"))</Day>
-    <Time>$([System.DateTime]::Now.ToString("HHmm"))</Time>
+    <Year>$([System.DateTime]::UtcNow.ToString("yyyy"))</Year>
+    <Month>$([System.DateTime]::UtcNow.ToString("MM"))</Month>
+    <Day>$([System.DateTime]::UtcNow.ToString("dd"))</Day>
+    <Hour>$([System.DateTime]::UtcNow.ToString("HH"))</Hour>
+    <Minute>$([System.DateTime]::UtcNow.ToString("mm"))</Minute>
 
-    <CosmosVersion>3.0.49</CosmosVersion>
-    <YukihanaVersion>2.0.13</YukihanaVersion>
+    <CosmosVersion>3, 0, 49</CosmosVersion>
+    <YukihanaVersion>2, 0, 14</YukihanaVersion>
 
     <YukihanaVersionInfo>
       <![CDATA[
@@ -26,22 +27,26 @@
 
 // This file is auto-generated. Do not edit.
 
-namespace Yukihana.Core.Generated%3b
+namespace Yukihana.Core%3b
 
 public static class VersionInfo
 {
-    public const string KERNEL_NAME = "CosmosOS"%3b
-    public const string KERNEL_VERSION = "$(CosmosVersion)"%3b
+    public static readonly FrameworkInfo Framework = new(
+        name: "CosmosOS",
+        version: new Version($(CosmosVersion))
+    )%3b
 
-    public const string OS_NAME = "Yukihana"%3b
-    public const string OS_VERSION = "$(YukihanaVersion)"%3b
-    public const string OS_REVISION = "rev-$(Year)$(Month)$(Day)$(Time)"%3b
+    public static readonly KernelInfo Kernel = new(
+        name: "Yukihana",
+        version: new Version($(YukihanaVersion)),
+        revision: new DateTime($(Year), $(Month), $(Day), $(Hour), $(Minute), 0, DateTimeKind.Utc)
+    )%3b
 }]]>
     </YukihanaVersionInfo>
   </PropertyGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <WriteLinesToFile File="Core/Generated/VersionInfo.cs" Lines="$(YukihanaVersionInfo)" Overwrite="true" />
+    <WriteLinesToFile File="Core/VersionInfo.cs" Lines="$(YukihanaVersionInfo)" Overwrite="true" />
   </Target>
 
   
