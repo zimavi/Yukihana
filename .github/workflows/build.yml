@@ -33,10 +33,6 @@ jobs:
             - name: ⚙️ Install Cosmos packages & dependencies
               run: cosmos install -y
 
-            - name: 🧪 Build kernel (Debug)
-              working-directory: Yukihana
-              run: cosmos build -v --all
-
             - name: 🚀 Build kernel (Release)
               working-directory: Yukihana
               run: cosmos build -v -c Release --all
