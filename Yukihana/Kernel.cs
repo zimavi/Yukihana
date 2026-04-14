@@ -2,7 +2,6 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Reflection;
-using Cosmos.Kernel.Core.IO;
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Yukihana.Core.Debug;

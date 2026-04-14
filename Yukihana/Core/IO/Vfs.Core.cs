@@ -3,6 +3,7 @@
 
 using Yukihana.Core.Debug;
 using Yukihana.Core.IO.Vfs;
+using Yukihana.Core.IO.Vfs.Backends;
 using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO;

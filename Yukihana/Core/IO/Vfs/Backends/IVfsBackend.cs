@@ -5,7 +5,7 @@ using System.Text;
 using Yukihana.Core.Debug;
 using Yukihana.Core.Primitives;
 
-namespace Yukihana.Core.IO.Vfs;
+namespace Yukihana.Core.IO.Vfs.Backends;
 
 public interface IVfsBackend
 {

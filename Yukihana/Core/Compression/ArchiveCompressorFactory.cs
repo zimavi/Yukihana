@@ -11,11 +11,10 @@ public static class ArchiveCompressorFactory
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        IArchiveCompressor[] compressors =
-        {
+        IArchiveCompressor[] compressors = [
             new GzipArchiveCompressor(),
             new Bzip2ArchiveCompressor(),
-        };
+        ];
 
         foreach (var compressor in compressors)
         {
