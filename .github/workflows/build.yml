@@ -15,6 +15,7 @@ jobs:
         strategy:
             matrix:
                 dotnet-version: [10.0.*]
+                arch: [x64, amd64]
         steps:
             - name: 📥 Checkout repository
               uses: actions/checkout@v6
@@ -41,6 +42,6 @@ jobs:
             - name: ⚙️ Install Cosmos packages & dependencies
               run: cosmos install -y
 
-            - name: 🚀 Build kernel (Release)
+            - name: 🚀 Build kernel (Release ${{ matrix.arch }})
               working-directory: Yukihana
-              run: cosmos build -v -c Release --all
+              run: cosmos build -v -c Release -a ${{ matrix.arch }}
