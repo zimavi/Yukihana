@@ -1,3 +1,4 @@
 bin/
 obj/
 output-x64/
+output-arm64/

@@ -24,6 +24,14 @@ jobs:
               with:
                 dotnet-version: ${{ matrix.dotnet-version }}
 
+            - name: 📦 Cache NuGet packages
+              uses: actions/cache@v5
+              with:
+                path: ~/.nuget/packages
+                key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+                restore-keys: |
+                  ${{ runner.os }}-nuget-
+
             - name: 🛣️ Add .NET tools to PATH
               run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
