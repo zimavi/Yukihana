@@ -15,7 +15,7 @@ jobs:
         strategy:
             matrix:
                 dotnet-version: [10.0.*]
-                arch: [x64, amd64]
+                arch: [x64, arm64]
         steps:
             - name: 📥 Checkout repository
               uses: actions/checkout@v6
