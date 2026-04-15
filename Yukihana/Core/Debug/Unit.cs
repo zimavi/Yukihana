@@ -34,7 +34,7 @@ public sealed class Unit : IDisposable
         Console.WriteLine($"{Present(_action)} {_target}");
     }
 
-    private void PrintResult(string status, string text, ConsoleColor color)
+    private static void PrintResult(string status, string text, ConsoleColor color)
     {
         Console.ForegroundColor = ConsoleColor.Gray;
         Console.Write(" [");

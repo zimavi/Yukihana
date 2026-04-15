@@ -15,8 +15,7 @@ public static class FsPermissionUtil
         FsPermissions permissions, 
         VfsCredentials credentials, 
         int ownerId, 
-        int groupId
-    ) =>
+        int groupId) =>
         credentials.IsRoot
             || (credentials.UserId == ownerId && (permissions & FsPermissions.UserRead) != 0)
             || (credentials.GroupId == groupId && (permissions & FsPermissions.GroupRead) != 0)
@@ -26,8 +25,7 @@ public static class FsPermissionUtil
         FsPermissions permissions, 
         VfsCredentials credentials, 
         int ownerId, 
-        int groupId
-    ) =>
+        int groupId) =>
         credentials.IsRoot
             || (credentials.UserId == ownerId && (permissions & FsPermissions.UserWrite) != 0)
             || (credentials.GroupId == groupId && (permissions & FsPermissions.GroupWrite) != 0)
@@ -37,8 +35,7 @@ public static class FsPermissionUtil
         FsPermissions permissions, 
         VfsCredentials credentials, 
         int ownerId, 
-        int groupId
-    ) =>
+        int groupId) =>
         credentials.IsRoot
             || (credentials.UserId == ownerId && (permissions & FsPermissions.UserExecute) != 0)
             || (credentials.GroupId == groupId && (permissions & FsPermissions.GroupExecute) != 0)

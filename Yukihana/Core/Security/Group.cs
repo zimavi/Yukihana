@@ -8,7 +8,7 @@ public sealed class Group (int id, string name)
     public int Id { get; } = id;
     public string Name { get; } = name;
 
-    private readonly HashSet<int> _members = new();
+    private readonly HashSet<int> _members = [];
     public IReadOnlyCollection<int> Members => _members;
 
     public bool ContainsMember(int userId) => _members.Contains(userId);

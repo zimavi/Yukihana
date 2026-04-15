@@ -18,7 +18,7 @@ public static partial class EnumerableExtensions
     {
         var list = new List<T>();
 
-        foreach(var item in source)
+        foreach(Option<T> item in source)
         {
             if (item.IsNone)
                 return Option<T[]>.None();
@@ -33,7 +33,7 @@ public static partial class EnumerableExtensions
     {
         var list = new List<T>();
 
-        foreach (var item in source)
+        foreach (Result<T, TError> item in source)
         {
             if (item.IsFailure)
                 return Result<T[], TError>.Failure(item.Error);
@@ -46,7 +46,7 @@ public static partial class EnumerableExtensions
 
     public static Option<T> FirstSome<T>(this IEnumerable<Option<T>> source)
     {
-        foreach (var item in source)
+        foreach (Option<T> item in source)
         {
             if (item.IsSome)
                 return item;

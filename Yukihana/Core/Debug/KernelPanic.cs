@@ -9,7 +9,7 @@ namespace Yukihana.Core.Debug;
 
 public static class KernelPanic
 {
-    private static int _panicEntered;
+    private static int s_panicEntered;
 
     public static void Panic(
         string reason,
@@ -17,7 +17,7 @@ public static class KernelPanic
         [CallerFilePath] string f = "",
         [CallerLineNumber] int l = 0)
     {
-        if (Interlocked.Exchange(ref _panicEntered, 1) != 0)
+        if (Interlocked.Exchange(ref s_panicEntered, 1) != 0)
             MinimalFailSafePanic("Recursive panic detected.");
 
         PlatformHAL.CpuOps?.DisableInterrupts();
@@ -38,7 +38,7 @@ public static class KernelPanic
         for (int i = start; i < logs.Length; i++)
         {
             var e = logs[i];
-            var delta = e.Time - Kernel.BootTime;
+            TimeSpan delta = e.Time - Kernel.BootTime;
             Console.WriteLine($"[{delta.TotalSeconds,10:0.000000}] {e.Source}: {e.Message}");
         }
 
@@ -80,7 +80,7 @@ public static class KernelPanic
 
         foreach (var e in logs)
         {
-            var delta = e.Time - Kernel.BootTime;
+            TimeSpan delta = e.Time - Kernel.BootTime;
             Serial.WriteString($"[{delta.TotalSeconds,10:0.000000}] {e.Source}: {e.Message}\n");
         }
     }

@@ -29,15 +29,15 @@ public class Kernel : Sys.Kernel
 
     private static string _ramfs_resource_key => string.Join('.', RAMFS_PATH, RAMFS_FILE);
 
-    private static readonly Logger _kernelLogger;
+    private static readonly Logger s_kernelLogger;
 
     static Kernel()
     {
         BootTime = DateTime.Now;
 
-        _kernelLogger = new();
-        _kernelLogger.Info("Static Kernel constructor called");
-        _kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
+        s_kernelLogger = new();
+        s_kernelLogger.Info("Static Kernel constructor called");
+        s_kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
     }
 
     protected override void BeforeRun()
@@ -163,9 +163,9 @@ public class Kernel : Sys.Kernel
     {
         Console.WriteLine("\n");
         
-        _kernelLogger.Info("Reached AfterRun().");
+        s_kernelLogger.Info("Reached AfterRun().");
 
-        _kernelLogger.Info("Kernel cleanup finished.");
-        _kernelLogger.Info("Bye.");
+        s_kernelLogger.Info("Kernel cleanup finished.");
+        s_kernelLogger.Info("Bye.");
     }
 }

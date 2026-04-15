@@ -10,9 +10,9 @@ namespace Yukihana.Core.IO;
 
 public static partial class VFS
 {
-    private static readonly Logger _logger = new("vfs");
+    private static readonly Logger s_logger = new("vfs");
 
-    private static readonly List<MountInfo> _mounts = new();
+    private static readonly List<MountInfo> s_mounts = [];
     public static string CurrentDirectory { get; private set; } = "/";
     public static VfsCredentials CurrentCredentials { get; private set; } = VfsCredentials.Root;
 
@@ -27,46 +27,46 @@ public static partial class VFS
 
         mountPoint = FsPath.NormalizeAbsolute(mountPoint);
 
-        _logger.Info($"Mounting {mountPoint} with {backend.GetType().Name}");
+        s_logger.Info($"Mounting {mountPoint} with {backend.GetType().Name}");
 
-        for (int i = 0; i < _mounts.Count; i++)
+        for (int i = 0; i < s_mounts.Count; i++)
         {
-            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+            if (string.Equals(s_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
             {
-                _mounts[i] = new MountInfo
+                s_mounts[i] = new MountInfo
                 {
                     MountPoint = mountPoint,
                     Backend = backend
                 };
-                _logger.Info($"Remounting {mountPoint}");
+                s_logger.Info($"Remounting {mountPoint}");
                 return;
             }
         }
 
-        _mounts.Add(new MountInfo
+        s_mounts.Add(new MountInfo
         {
             MountPoint = mountPoint,
             Backend = backend
         });
 
-        _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+        s_mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
 
-        _logger.Info($"Mounted {mountPoint}");
+        s_logger.Info($"Mounted {mountPoint}");
     }
 
     public static bool Unmount(string mountPoint)
     {
         mountPoint = FsPath.NormalizeAbsolute(mountPoint);
 
-        _logger.Info($"Unmounting {mountPoint}");
+        s_logger.Info($"Unmounting {mountPoint}");
 
-        for (int i = 0; i < _mounts.Count; i++)
+        for (int i = 0; i < s_mounts.Count; i++)
         {
-            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+            if (string.Equals(s_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
             {
-                _mounts.RemoveAt(i);
-                _logger.Info($"Unmounted {mountPoint}");
-                _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+                s_mounts.RemoveAt(i);
+                s_logger.Info($"Unmounted {mountPoint}");
+                s_mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
                 return true;
             }
         }
@@ -81,30 +81,30 @@ public static partial class VFS
         mountPoint = FsPath.NormalizeAbsolute(mountPoint);
         oldMountPoint = FsPath.NormalizeAbsolute(oldMountPoint);
 
-        _logger.Info($"Remounting {mountPoint} -> {oldMountPoint} with {backend.GetType().Name}");
+        s_logger.Info($"Remounting {mountPoint} -> {oldMountPoint} with {backend.GetType().Name}");
 
         MountInfo? oldMount = null;
 
-        for (int i = 0; i < _mounts.Count; i++)
+        for (int i = 0; i < s_mounts.Count; i++)
         {
-            if (string.Equals(_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
+            if (string.Equals(s_mounts[i].MountPoint, mountPoint, StringComparison.Ordinal))
             {
-                oldMount = _mounts[i];
-                _mounts.RemoveAt(i);
+                oldMount = s_mounts[i];
+                s_mounts.RemoveAt(i);
                 break;
             }
         }
 
-        for (int i = 0; i < _mounts.Count; i++)
+        for (int i = 0; i < s_mounts.Count; i++)
         {
-            if (string.Equals(_mounts[i].MountPoint, oldMountPoint, StringComparison.Ordinal))
+            if (string.Equals(s_mounts[i].MountPoint, oldMountPoint, StringComparison.Ordinal))
             {
-                _mounts.RemoveAt(i);
+                s_mounts.RemoveAt(i);
                 break;
             }
         }
 
-        _mounts.Add(new MountInfo
+        s_mounts.Add(new MountInfo
         {
             MountPoint = mountPoint,
             Backend = backend
@@ -112,18 +112,18 @@ public static partial class VFS
 
         if (oldMount is not null)
         {
-            _mounts.Add(new MountInfo
+            s_mounts.Add(new MountInfo
             {
                 MountPoint = oldMountPoint,
                 Backend = oldMount.Backend
             });
 
-            _logger.Info($"Moved old mount {mountPoint} -> {oldMountPoint}");
+            s_logger.Info($"Moved old mount {mountPoint} -> {oldMountPoint}");
         }
 
-        _mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
+        s_mounts.Sort((a, b) => b.MountPoint.Length.CompareTo(a.MountPoint.Length));
 
-        _logger.Info($"Remounted {mountPoint}");
+        s_logger.Info($"Remounted {mountPoint}");
     }
 
     public static Option<KernelError> ChangeDirectory(string path)

@@ -106,7 +106,7 @@ public static partial class VFS
                     {
                         string deniedPath = FsPath.CombineAbsolute(mount.MountPoint, currentRel);
 
-                        _logger.Warn($"permission denied: read {deniedPath}");
+                        s_logger.Warn($"permission denied: read {deniedPath}");
                         return Result<ResolvedPath, KernelError>.Failure(KernelError.PermissionsDenied($"read {deniedPath}"));
                     }
                 }
@@ -138,7 +138,7 @@ public static partial class VFS
         MountInfo? best = null;
         int bestLength = -1;
 
-        foreach (var mount in _mounts)
+        foreach (var mount in s_mounts)
         {
             if (!IsUnderMount(absolutePath, mount.MountPoint))
                 continue;

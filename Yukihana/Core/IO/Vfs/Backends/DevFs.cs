@@ -14,11 +14,12 @@ public sealed class DevFs : IVfsBackend
 
     public DevFs()
     {
-        _devices = new(StringComparer.Ordinal);
-
-        _devices["null"] = () => new NullDeviceStream();
-        _devices["zero"] = () => new ZeroDeviceStream();
-        _devices["random"] = () => new RandomDeviceStream();
+        _devices = new(StringComparer.Ordinal)
+        {
+            ["null"] = () => new NullDeviceStream(),
+            ["zero"] = () => new ZeroDeviceStream(),
+            ["random"] = () => new RandomDeviceStream()
+        };
     }
 
     #region Interface Implementation
@@ -74,7 +75,7 @@ public sealed class DevFs : IVfsBackend
         return Result<string[], KernelError>.Success([.. _devices.Keys]);
     }
 
-    public Option<KernelError> SetPermissions(string path, FsPermissions permissions) => 
+    public Option<KernelError> SetPermissions(string path, FsPermissions permissions) =>
         ReturnReadOnly();
 
     public bool TryGetMetadata(string path, out VfsMetadata metadata)
@@ -132,7 +133,7 @@ public sealed class DevFs : IVfsBackend
     public Option<KernelError> ResizeSpace(ulong totalBytes) => ReturnReadOnly();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private KernelError ReturnReadOnly() => KernelError.InvalidOp("Read-only filesystem.");
+    private static KernelError ReturnReadOnly() => KernelError.InvalidOp("Read-only filesystem.");
 
     #endregion
 

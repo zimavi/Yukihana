@@ -15,9 +15,10 @@ public sealed class ProcFs : IVfsBackend
 
     public ProcFs()
     {
-        _files = new Dictionary<string, Func<Result<byte[], KernelError>>>(StringComparer.Ordinal);
-
-        _files["meminfo"] = () => Encoding.UTF8.GetBytes(GetMemoryInfo());
+        _files = new Dictionary<string, Func<Result<byte[], KernelError>>>(StringComparer.Ordinal)
+        {
+            ["meminfo"] = () => Encoding.UTF8.GetBytes(GetMemoryInfo())
+        };
     }
 
     private static string GetMemoryInfo()

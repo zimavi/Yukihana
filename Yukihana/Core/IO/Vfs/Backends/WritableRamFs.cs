@@ -10,42 +10,30 @@ namespace Yukihana.Core.IO.Vfs.Backends;
 
 public sealed class TempFs(ulong totalBytes) : IVfsBackend
 {
-    private sealed class Node
+    private sealed class Node(FsNodeKind kind)
     {
-        public FsNodeKind Kind;
+        public FsNodeKind Kind = kind;
         public Dictionary<string, Node> Children = new(StringComparer.Ordinal);
         public byte[]? Data;
         public string? LinkTarget;
-        public FsPermissions Permissions;
+        public FsPermissions Permissions = kind switch
+        {
+            FsNodeKind.Directory => FsPermissionUtil.DefaultDirectory,
+            FsNodeKind.SymbolicLink => FsPermissionUtil.DefaultSymbolic,
+            _ => FsPermissionUtil.DefaultFile,
+        };
         public int UserId;
         public int GroupId;
         public Node? Parent;
 
         public long OwnSize;
         public long SubtreeSize;
-
-        public Node(FsNodeKind kind)
-        {
-            Kind = kind;
-            Permissions = kind switch
-            {
-                FsNodeKind.Directory => FsPermissionUtil.DefaultDirectory,
-                FsNodeKind.SymbolicLink => FsPermissionUtil.DefaultSymbolic,
-                _ => FsPermissionUtil.DefaultFile,
-            };
-        }
     }
 
-    private sealed class NodeBacking : IRamFsStreamBacking
+    private sealed class NodeBacking(TempFs fs, TempFs.Node node) : IRamFsStreamBacking
     {
-        private readonly TempFs _fs;
-        private readonly Node _node;
-
-        public NodeBacking(TempFs fs, Node node)
-        {
-            _fs = fs;
-            _node = node;
-        }
+        private readonly TempFs _fs = fs;
+        private readonly Node _node = node;
 
         public long Length => _node.OwnSize;
         public bool CanRead => true;
@@ -54,13 +42,12 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
 
         public int Read(long position, Span<byte> buffer)
         {
-            if (position < 0)
-                throw new ArgumentOutOfRangeException(nameof(position));
+            ArgumentOutOfRangeException.ThrowIfNegative(position);
 
             if (buffer.IsEmpty)
                 return 0;
 
-            byte[] data = _node.Data ?? Array.Empty<byte>();
+            byte[] data = _node.Data ?? [];
 
             if (position > int.MaxValue || position >= data.LongLength)
                 return 0;
@@ -230,14 +217,13 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
                     if (node.Kind != FsNodeKind.File)
                         return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a file: {path}"));
 
-                    if (!TryReplaceLeaf(node, FsNodeKind.File, Array.Empty<byte>(), null, 0, out var fileError))
+                    if (!TryReplaceLeaf(node, FsNodeKind.File, [], null, 0, out var fileError))
                         return Result<Stream, KernelError>.Failure(fileError);
                 }
                 break;
 
             case FileMode.OpenOrCreate:
-                if (node is null)
-                    node = CreateEmptyFileNode(path);
+                node ??= CreateEmptyFileNode(path);
                 break;
 
             case FileMode.Truncate:
@@ -247,13 +233,12 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
                 if (node.Kind != FsNodeKind.File)
                     return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is not a file: {path}"));
 
-                if (!TryReplaceLeaf(node, FsNodeKind.File, Array.Empty<byte>(), null, 0, out var truncateError))
+                if (!TryReplaceLeaf(node, FsNodeKind.File, [], null, 0, out var truncateError))
                     return Result<Stream, KernelError>.Failure(truncateError);
                 break;
 
             case FileMode.Append:
-                if (node is null)
-                    node = CreateEmptyFileNode(path);
+                node ??= CreateEmptyFileNode(path);
                 break;
 
             default:

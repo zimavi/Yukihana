@@ -12,5 +12,5 @@ public enum BootStage
 
 public static class BootEnvironment
 {
-    public static BootStage Stage = BootStage.EarlyKernel;
+    public static BootStage Stage { get; set; } = BootStage.EarlyKernel;
 }

@@ -5,20 +5,15 @@ using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.IO.Loaders;
 
-public sealed class CompositeResourceProvider : IResourceProvider
+public sealed class CompositeResourceProvider(params IResourceProvider[] providers) : IResourceProvider
 {
-    private readonly List<IResourceProvider> _providers;
-
-    public CompositeResourceProvider(params IResourceProvider[] providers)
-    {
-        _providers = [.. providers];
-    }
+    private readonly List<IResourceProvider> _providers = [.. providers];
 
     public Option<byte[]> TryLoad(string relativePath)
     {
-        foreach (var provider in _providers)
+        foreach (IResourceProvider provider in _providers)
         {
-            var result = provider.TryLoad(relativePath);
+            Option<byte[]> result = provider.TryLoad(relativePath);
             if (result.IsSome)
                 return result;
         }

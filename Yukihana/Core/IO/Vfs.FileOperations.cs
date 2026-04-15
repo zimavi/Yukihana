@@ -10,7 +10,7 @@ namespace Yukihana.Core.IO;
 
 public static partial class VFS
 {
-     public static Result<byte[], KernelError> ReadAllBytes(string path)
+    public static Result<byte[], KernelError> ReadAllBytes(string path)
     {
         var resolved = ResolvePath(path, followFinalSymlink: true);
         if (resolved.IsFailure)
@@ -23,7 +23,7 @@ public static partial class VFS
 
         if (!FsPermissionUtil.CanRead(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
-            _logger.Warn($"permission denied: read {resolved.Value.AbsolutePath}");
+            s_logger.Warn($"permission denied: read {resolved.Value.AbsolutePath}");
             return Result<byte[], KernelError>.Failure(KernelError.PermissionsDenied($"read {resolved.Value.AbsolutePath}"));
         }
 
@@ -79,7 +79,7 @@ public static partial class VFS
                 parentResolved.Value.Metadata.UserId,
                 parentResolved.Value.Metadata.GroupId))
         {
-            _logger.Warn($"permission denied: create in {parentResolved.Value.AbsolutePath}");
+            s_logger.Warn($"permission denied: create in {parentResolved.Value.AbsolutePath}");
             return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Permission denied: {parentResolved.Value.AbsolutePath}"));
         }
 
@@ -104,7 +104,7 @@ public static partial class VFS
             metadata = resolved.Value.Metadata;
             if (!FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
             {
-                _logger.Warn($"permission denied: write {resolved.Value.AbsolutePath}");
+                s_logger.Warn($"permission denied: write {resolved.Value.AbsolutePath}");
                 return Option<KernelError>.Some(KernelError.PermissionsDenied($"write {resolved.Value.AbsolutePath}"));
             }
 
@@ -123,7 +123,7 @@ public static partial class VFS
 
         if (!FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
-            _logger.Warn($"permission denied: create/write in {parentResolved.Value.AbsolutePath}");
+            s_logger.Warn($"permission denied: create/write in {parentResolved.Value.AbsolutePath}");
             return Option<KernelError>.Some(KernelError.PermissionsDenied($"create/write in {parentResolved.Value.AbsolutePath}"));
         }
 
@@ -158,7 +158,7 @@ public static partial class VFS
 
         if (!FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
-            _logger.Warn($"permission denied: write in {parentResolved.Value.AbsolutePath}");
+            s_logger.Warn($"permission denied: write in {parentResolved.Value.AbsolutePath}");
             return Option<KernelError>.Some(KernelError.PermissionsDenied($"write in {parentResolved.Value.AbsolutePath}"));
         }
 
@@ -167,7 +167,7 @@ public static partial class VFS
             ? leaf
             : parentResolved.Value.RelativePath + "/" + leaf;
 
-        _logger.Warn($"mkdir: {absolute}");
+        s_logger.Warn($"mkdir: {absolute}");
         return parentResolved.Value.Mount.Backend.CreateDirectory(rel, recursive);
     }
 
@@ -188,7 +188,7 @@ public static partial class VFS
 
         if (!FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
-            _logger.Warn($"permission denied: write in {parentResolved.Value.AbsolutePath}");
+            s_logger.Warn($"permission denied: write in {parentResolved.Value.AbsolutePath}");
             return Option<KernelError>.Some(KernelError.PermissionsDenied($"write in {parentResolved.Value.AbsolutePath}"));
         }
 
@@ -216,7 +216,7 @@ public static partial class VFS
         var metadata = parentResolved.Value.Metadata;
         if (!FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
-            _logger.Warn($"permission denied: write in {parentResolved.Value.AbsolutePath}");
+            s_logger.Warn($"permission denied: write in {parentResolved.Value.AbsolutePath}");
             return Option<KernelError>.Some(KernelError.PermissionsDenied($"write in {parentResolved.Value.AbsolutePath}"));
         }
 
@@ -239,7 +239,7 @@ public static partial class VFS
             metadata.UserId, 
             metadata.GroupId))
         {
-            _logger.Warn($"permission denied: read {resolved.Value.AbsolutePath}");
+            s_logger.Warn($"permission denied: read {resolved.Value.AbsolutePath}");
             return Result<string[], KernelError>.Failure(KernelError.PermissionsDenied($"read {resolved.Value.AbsolutePath}"));
         }
 
@@ -251,7 +251,7 @@ public static partial class VFS
 
         string currentAbs = resolved.Value.AbsolutePath;
 
-        foreach (var mount in _mounts)
+        foreach (var mount in s_mounts)
         {
             string mountPoint = mount.MountPoint;
 

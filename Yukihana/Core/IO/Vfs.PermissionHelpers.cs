@@ -38,7 +38,7 @@ public static partial class VFS
         if(resolved.IsFailure)
             return Option<KernelError>.Some(resolved.Error);
         
-        _logger.Info($"chmod: {resolved.Value.AbsolutePath} -> {FsPermissionUtil.ToSymbolicString(permissions)}");
+        s_logger.Info($"chmod: {resolved.Value.AbsolutePath} -> {FsPermissionUtil.ToSymbolicString(permissions)}");
         return resolved.Value.Mount.Backend.SetPermissions(resolved.Value.AbsolutePath, permissions);
     }
 }

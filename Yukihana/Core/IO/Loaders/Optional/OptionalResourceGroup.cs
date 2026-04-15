@@ -11,7 +11,7 @@ public sealed class OptionalResourceGroup<TState>
     private readonly string _name;
     private readonly Func<TState> _createState;
     private readonly Action<TState> _commit;
-    private readonly List<OptionalResourceMember<TState>> _members = new();
+    private readonly List<OptionalResourceMember<TState>> _members = [];
 
     private readonly IResourceProvider _provider;
 
@@ -42,9 +42,7 @@ public sealed class OptionalResourceGroup<TState>
         logger.Info("OptionalResourceGroup -> TryLoad()");
 
         logger.Info($"Loading asset group \"{_name}\"");
-
         TState state = _createState();
-
         List<(OptionalResourceMember<TState> Member, byte[] Data)> staged = new(_members.Count);
 
         logger.Info($"To stage: {_members.Count}");
@@ -63,25 +61,22 @@ public sealed class OptionalResourceGroup<TState>
             }
 
             logger.Info($"Member \"{member.Description}\" loaded successfully");
-
             staged.Add((member, result.Value));
-
             logger.Info($"Staged \"{member.Description}\" for group \"{_name}\"");
         }
 
         logger.Info("All members have been staged. Applying them to state");
 
         int i = 0;
-        foreach(var item in staged)
+        foreach(var (Member, Data) in staged)
         {
-            logger.Info($"Apply for \"{item.Member.Description}\"");
+            logger.Info($"Apply for \"{Member.Description}\"");
             
-            item.Member.Apply(state, item.Data);
+            Member.Apply(state, Data);
             i++;
         }
 
         logger.Info("Commiting state");
-
         _commit(state);
 
         logger.Info($"Optional asset group \"{_name}\" loaded successfully");

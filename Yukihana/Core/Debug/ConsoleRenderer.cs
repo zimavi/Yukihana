@@ -5,7 +5,7 @@ namespace Yukihana.Core.Debug;
 
 public static class ConsoleRenderer
 {
-    public static bool Enabled = true;
+    public static bool Enabled { get; set; } = true;
 
     public static void Render(LogEntry entry)
     {

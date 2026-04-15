@@ -162,7 +162,7 @@ public sealed class CpioArchivator : IArchivator
                 {
                     Path = path,
                     Kind = ArchiveEntryKind.SymbolicLink,
-                    Data = Array.Empty<byte>(),
+                    Data = [],
                     LinkTarget = ArchivePath.NormalizeLinkTarget(CpioReadAscii(payload, 0, payload.Length).TrimEnd('\0')),
                     Mode = (int)(mode & 0x1FF),
                     UserId = (int)uid,
@@ -198,7 +198,7 @@ public sealed class CpioArchivator : IArchivator
                         {
                             Path = path,
                             Kind = ArchiveEntryKind.HardLink,
-                            Data = Array.Empty<byte>(),
+                            Data = [],
                             LinkTarget = firstPath,
                             HardLinkKey = key,
                             Mode = (int)(mode & 0x1FF),
@@ -270,7 +270,7 @@ public sealed class CpioArchivator : IArchivator
         if (fileSize < 0 || fileSize > int.MaxValue || offset + fileSize > data.Length)
             throw new InvalidDataException($"Truncated CPIO payload for '{name}'.");
 
-        byte[] payload = fileSize == 0 ? Array.Empty<byte>() : ArchivePath.CopyBytes(data, offset, (int)fileSize);
+        byte[] payload = fileSize == 0 ? [] : ArchivePath.CopyBytes(data, offset, (int)fileSize);
         offset = ArchivePath.Align(offset + (int)fileSize, 2);
 
         string path = ArchivePath.Normalize(name);
@@ -284,7 +284,7 @@ public sealed class CpioArchivator : IArchivator
                 {
                     Path = path,
                     Kind = ArchiveEntryKind.Directory,
-                    Data = Array.Empty<byte>(),
+                    Data = [],
                     Mode = (int)(mode & 0x1FF),
                     UserId = (int)uid,
                     GroupId = (int)gid,
@@ -297,7 +297,7 @@ public sealed class CpioArchivator : IArchivator
                 {
                     Path = path,
                     Kind = ArchiveEntryKind.SymbolicLink,
-                    Data = Array.Empty<byte>(),
+                    Data = [],
                     LinkTarget = ArchivePath.NormalizeLinkTarget(CpioReadAscii(payload, 0, payload.Length).TrimEnd('\0')),
                     Mode = (int)(mode & 0x1FF),
                     UserId = (int)uid,
@@ -333,7 +333,7 @@ public sealed class CpioArchivator : IArchivator
                         {
                             Path = path,
                             Kind = ArchiveEntryKind.HardLink,
-                            Data = Array.Empty<byte>(),
+                            Data = [],
                             LinkTarget = firstPath,
                             HardLinkKey = key,
                             Mode = (int)(mode & 0x1FF),
@@ -375,7 +375,7 @@ public sealed class CpioArchivator : IArchivator
         const uint iFLNK = 0xA000;
 
         string path = ArchivePath.Normalize(entry.Path);
-        byte[] payload = Array.Empty<byte>();
+        byte[] payload = [];
         uint mode = (uint)(entry.Mode & 0x1FF);
         uint typeBits = entry.Kind switch
         {
@@ -404,26 +404,13 @@ public sealed class CpioArchivator : IArchivator
             nlink = 1;
         }
 
-        switch (entry.Kind)
+        payload = entry.Kind switch
         {
-            case ArchiveEntryKind.Directory:
-                payload = Array.Empty<byte>();
-                break;
-
-            case ArchiveEntryKind.SymbolicLink:
-                payload = Encoding.ASCII.GetBytes(entry.LinkTarget ?? string.Empty);
-                break;
-
-            case ArchiveEntryKind.HardLink:
-                payload = Array.Empty<byte>();
-                break;
-
-            case ArchiveEntryKind.File:
-            default:
-                payload = entry.Data ?? Array.Empty<byte>();
-                break;
-        }
-
+            ArchiveEntryKind.Directory => [],
+            ArchiveEntryKind.SymbolicLink => Encoding.ASCII.GetBytes(entry.LinkTarget ?? string.Empty),
+            ArchiveEntryKind.HardLink => [],
+            _ => entry.Data ?? [],
+        };
         if (entry.Kind == ArchiveEntryKind.File && entry.HardLinkKey is not null)
         {
             if (!writtenRoots.Contains(entry.HardLinkKey))

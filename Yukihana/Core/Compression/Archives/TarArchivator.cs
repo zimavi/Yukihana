@@ -95,68 +95,51 @@ public sealed class TarArchivator : IArchivator
                 throw new InvalidDataException($"Truncated TAR payload for '{fullPath}'.");
 
             byte[] payload = size == 0 ? Array.Empty<byte>() : ArchivePath.CopyBytes(data, offset, (int)size);
-
-            ArchiveEntry entry;
-
-            switch (typeFlag)
+            ArchiveEntry entry = typeFlag switch
             {
-                case '5':
-                    entry = new ArchiveEntry
-                    {
-                        Path = fullPath,
-                        Kind = ArchiveEntryKind.Directory,
-                        Data = Array.Empty<byte>(),
-                        Mode = mode,
-                        UserId = uid,
-                        GroupId = gid,
-                        ModifiedUnixTimeSeconds = mtime,
-                    };
-                    break;
-
-                case '2':
-                    entry = new ArchiveEntry
-                    {
-                        Path = fullPath,
-                        Kind = ArchiveEntryKind.SymbolicLink,
-                        Data = Array.Empty<byte>(),
-                        LinkTarget = ArchivePath.NormalizeLinkTarget(linkName),
-                        Mode = mode,
-                        UserId = uid,
-                        GroupId = gid,
-                        ModifiedUnixTimeSeconds = mtime,
-                    };
-                    break;
-
-                case '1':
-                    entry = new ArchiveEntry
-                    {
-                        Path = fullPath,
-                        Kind = ArchiveEntryKind.HardLink,
-                        Data = Array.Empty<byte>(),
-                        LinkTarget = ArchivePath.Normalize(linkName),
-                        Mode = mode,
-                        UserId = uid,
-                        GroupId = gid,
-                        ModifiedUnixTimeSeconds = mtime,
-                    };
-                    break;
-
-                case '0':
-                case '\0':
-                default:
-                    entry = new ArchiveEntry
-                    {
-                        Path = fullPath,
-                        Kind = ArchiveEntryKind.File,
-                        Data = payload,
-                        Mode = mode,
-                        UserId = uid,
-                        GroupId = gid,
-                        ModifiedUnixTimeSeconds = mtime,
-                    };
-                    break;
-            }
-
+                '5' => new ArchiveEntry
+                {
+                    Path = fullPath,
+                    Kind = ArchiveEntryKind.Directory,
+                    Data = [],
+                    Mode = mode,
+                    UserId = uid,
+                    GroupId = gid,
+                    ModifiedUnixTimeSeconds = mtime,
+                },
+                '2' => new ArchiveEntry
+                {
+                    Path = fullPath,
+                    Kind = ArchiveEntryKind.SymbolicLink,
+                    Data = [],
+                    LinkTarget = ArchivePath.NormalizeLinkTarget(linkName),
+                    Mode = mode,
+                    UserId = uid,
+                    GroupId = gid,
+                    ModifiedUnixTimeSeconds = mtime,
+                },
+                '1' => new ArchiveEntry
+                {
+                    Path = fullPath,
+                    Kind = ArchiveEntryKind.HardLink,
+                    Data = [],
+                    LinkTarget = ArchivePath.Normalize(linkName),
+                    Mode = mode,
+                    UserId = uid,
+                    GroupId = gid,
+                    ModifiedUnixTimeSeconds = mtime,
+                },
+                _ => new ArchiveEntry
+                {
+                    Path = fullPath,
+                    Kind = ArchiveEntryKind.File,
+                    Data = payload,
+                    Mode = mode,
+                    UserId = uid,
+                    GroupId = gid,
+                    ModifiedUnixTimeSeconds = mtime,
+                },
+            };
             image.Add(entry);
             offset = ArchivePath.Align(offset + (int)size, 512);
         }
@@ -201,21 +184,21 @@ public sealed class TarArchivator : IArchivator
             _ => (byte)'0',
         };
 
-        byte[] payload = Array.Empty<byte>();
+        byte[] payload = [];
         string? linkTarget = entry.LinkTarget;
 
         if (entry.Kind == ArchiveEntryKind.File)
         {
-            payload = entry.Data ?? Array.Empty<byte>();
+            payload = entry.Data ?? [];
         }
         else if (entry.Kind == ArchiveEntryKind.SymbolicLink)
         {
-            payload = Array.Empty<byte>();
+            payload = [];
             linkTarget ??= string.Empty;
         }
         else
         {
-            payload = Array.Empty<byte>();
+            payload = [];
         }
 
         TarWriteOctal(header, 124, 12, payload.LongLength);
@@ -287,8 +270,9 @@ public sealed class TarArchivator : IArchivator
 
     private static string TarReadString(ReadOnlySpan<byte> buffer, int offset, int length)
     {
-        if (offset < 0 || length < 0 || offset + length > buffer.Length)
-            throw new ArgumentOutOfRangeException();
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(offset + length, buffer.Length);
 
         int end = offset + length;
         while (end > offset && buffer[end - 1] == 0)
@@ -299,8 +283,9 @@ public sealed class TarArchivator : IArchivator
 
     private static long TarReadOctal(ReadOnlySpan<byte> buffer, int offset, int length)
     {
-        if (offset < 0 || length < 0 || offset + length > buffer.Length)
-            throw new ArgumentOutOfRangeException();
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(offset + length, buffer.Length);
 
         long value = 0;
         for (int i = 0; i < length; i++)

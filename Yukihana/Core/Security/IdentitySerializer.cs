@@ -8,11 +8,11 @@ namespace Yukihana.Core.Security;
 
 public static class IdentitySerializer
 {
-    private static Logger _logger = new("identity.serializer");
+    private static readonly Logger s_logger = new("identity.serializer");
 
     public static (string Passwd, string Shadow, string Group) Serialize(IUserStore store)
     {
-        _logger.Info("Attempting to serialize users");
+        s_logger.Info("Attempting to serialize users");
         return (
             SerializePasswd(store.GetAllUsers()),
             SerializeShadow(store.GetAllUsers()),
@@ -26,7 +26,7 @@ public static class IdentitySerializer
 
         foreach(var user in users.OrderBy(user => user.Id))
         {
-            _logger.Info($"Serializing user \"{user.Name}\"");
+            s_logger.Info($"Serializing user \"{user.Name}\"");
 
             ValidateName(user.Name);
             ValidatePath(user.HomeDirectory);
@@ -53,7 +53,7 @@ public static class IdentitySerializer
 
         foreach (var user in users.OrderBy(user => user.Id))
         {
-            _logger.Info($"Serializing password for \"{user.Name}\"");
+            s_logger.Info($"Serializing password for \"{user.Name}\"");
 
             ValidateName(user.Name);
             ValidateField(user.PasswordHash, nameof(user.PasswordHash), allowEmpty: true);
@@ -74,7 +74,7 @@ public static class IdentitySerializer
 
         foreach (var group in groups.OrderBy(group => group.Id))
         {
-            _logger.Info($"Serializing group \"{group.Name}\"");
+            s_logger.Info($"Serializing group \"{group.Name}\"");
 
             ValidateName(group.Name);
 

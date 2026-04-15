@@ -121,7 +121,7 @@ public static class FsPath
         path = NormalizeRelative(path);
 
         if (string.IsNullOrEmpty(path))
-            return Array.Empty<string>();
+            return [];
 
         return path.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }

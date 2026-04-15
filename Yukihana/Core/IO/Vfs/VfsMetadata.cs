@@ -3,20 +3,11 @@
 
 namespace Yukihana.Core.IO.Vfs;
 
-public readonly struct VfsMetadata
+public readonly struct VfsMetadata(FsNodeKind kind, FsPermissions permissions, int userId, int groupId, long size)
 {
-    public FsNodeKind Kind { get; }
-    public FsPermissions Permissions { get; }
-    public int UserId { get; }
-    public int GroupId { get; }
-    public long Size { get; }
-
-    public VfsMetadata(FsNodeKind kind, FsPermissions permissions, int userId, int groupId, long size) 
-    {
-        Kind = kind;
-        Permissions = permissions;
-        UserId = userId;
-        GroupId = groupId;
-        Size = size;
-    }
+    public FsNodeKind Kind { get; } = kind;
+    public FsPermissions Permissions { get; } = permissions;
+    public int UserId { get; } = userId;
+    public int GroupId { get; } = groupId;
+    public long Size { get; } = size;
 }

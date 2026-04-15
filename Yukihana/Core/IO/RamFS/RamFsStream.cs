@@ -7,7 +7,6 @@ public sealed class RamFsStream : Stream
 {
     private readonly IRamFsStreamBacking _backing;
     private readonly FileAccess _access;
-    private readonly FileShare _share;
     private long _position;
     private bool _disposed;
 
@@ -15,7 +14,7 @@ public sealed class RamFsStream : Stream
     {
         _backing = backing ?? throw new ArgumentNullException(nameof(backing));
         _access = access;
-        _share = share;
+        Share = share;
 
         if (initialPosition < 0)
             throw new ArgumentOutOfRangeException(nameof(initialPosition));
@@ -26,7 +25,7 @@ public sealed class RamFsStream : Stream
         _position = initialPosition;
     }
 
-    public FileShare Share => _share;
+    public FileShare Share { get; }
 
     public override bool CanRead => !_disposed && ((_access & FileAccess.Read) != 0) && _backing.CanRead;
     public override bool CanWrite => !_disposed && ((_access & FileAccess.Write) != 0) && _backing.CanWrite;
@@ -74,10 +73,11 @@ public sealed class RamFsStream : Stream
         if (!CanRead)
             throw new NotSupportedException("Read is not supported.");
 
-        if (buffer is null)
-            throw new ArgumentNullException(nameof(buffer));
-        if (offset < 0 || count < 0 || offset > buffer.Length - count)
-            throw new ArgumentOutOfRangeException();
+        ArgumentNullException.ThrowIfNull(buffer);
+
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(offset, buffer.Length - count);
 
         int read = Read(new Span<byte>(buffer, offset, count));
         return read;
@@ -124,8 +124,7 @@ public sealed class RamFsStream : Stream
         if (!CanWrite)
             throw new NotSupportedException("SetLength is not supported.");
 
-        if (value < 0)
-            throw new ArgumentOutOfRangeException(nameof(value));
+        ArgumentOutOfRangeException.ThrowIfNegative(value);
 
         _backing.SetLength(value);
         if (_position > value)
@@ -139,10 +138,11 @@ public sealed class RamFsStream : Stream
         if (!CanWrite)
             throw new NotSupportedException("Write is not supported.");
 
-        if (buffer is null)
-            throw new ArgumentNullException(nameof(buffer));
-        if (offset < 0 || count < 0 || offset > buffer.Length - count)
-            throw new ArgumentOutOfRangeException();
+        ArgumentNullException.ThrowIfNull(buffer);
+
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(offset, buffer.Length - count);
 
         Write(new ReadOnlySpan<byte>(buffer, offset, count));
     }
@@ -171,9 +171,5 @@ public sealed class RamFsStream : Stream
         base.Dispose(disposing);
     }
 
-    private void EnsureNotDisposed()
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(RamFsStream));
-    }
+    private void EnsureNotDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
 }

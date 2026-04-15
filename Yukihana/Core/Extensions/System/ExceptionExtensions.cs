@@ -96,7 +96,7 @@ public static partial class ExceptionExtensions
 
         Serial.WriteString("Extracting type\n");
 
-        var type = ex.GetType();
+        Type type = ex.GetType();
 
         Serial.WriteString("Appending type name\n");
         sb.Append(type.FullName);

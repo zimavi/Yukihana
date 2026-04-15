@@ -20,10 +20,15 @@ public enum InitRamFsArchive
 
 public sealed class InitRamFs : IVfsBackend
 {
-    private sealed class Inode
+    private sealed class Inode(FsNodeKind kind)
     {
-        public FsNodeKind Kind;
-        public FsPermissions Permissions;
+        public FsNodeKind Kind = kind;
+        public FsPermissions Permissions = kind switch
+        {
+            FsNodeKind.Directory => FsPermissionUtil.DefaultDirectory,
+            FsNodeKind.SymbolicLink => FsPermissionUtil.DefaultSymbolic,
+            _ => FsPermissionUtil.DefaultFile,
+        };
         public int UserId;
         public int GroupId;
         public byte[]? Data;
@@ -31,17 +36,6 @@ public sealed class InitRamFs : IVfsBackend
         public long Size;
         public long SubtreeSize;
         public Dictionary<string, Inode>? Children = new(StringComparer.Ordinal);
-
-        public Inode(FsNodeKind kind)
-        {
-            Kind = kind;
-            Permissions = kind switch
-            {
-                FsNodeKind.Directory => FsPermissionUtil.DefaultDirectory,
-                FsNodeKind.SymbolicLink => FsPermissionUtil.DefaultSymbolic,
-                _ => FsPermissionUtil.DefaultFile,
-            };
-        }
     }
 
     private sealed class ReadOnlyNodeBacking : IRamFsStreamBacking

@@ -13,32 +13,21 @@ public enum LogLevel : byte
     Critical
 }
 
-public readonly struct LogEntry
+public readonly struct LogEntry(
+    DateTime time,
+    LogLevel level,
+    string source,
+    string message,
+    string member,
+    string file,
+    int line)
 {
-    public readonly DateTime Time;
-    public readonly LogLevel Level;
-    public readonly string Source;
-    public readonly string Message;
+    public readonly DateTime Time = time;
+    public readonly LogLevel Level = level;
+    public readonly string Source = source;
+    public readonly string Message = message;
 
-    public readonly string Member;
-    public readonly string File;
-    public readonly int Line;
-
-    public LogEntry(
-        DateTime time,
-        LogLevel level,
-        string source,
-        string message,
-        string member,
-        string file,
-        int line)
-    {
-        Time = time;
-        Level = level;
-        Source = source;
-        Message = message;
-        Member = member;
-        File = file;
-        Line = line;
-    }
+    public readonly string Member = member;
+    public readonly string File = file;
+    public readonly int Line = line;
 }
