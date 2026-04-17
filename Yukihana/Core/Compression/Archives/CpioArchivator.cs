@@ -56,8 +56,7 @@ public sealed class CpioArchivator : IArchivator
 
     public byte[] Write(ArchiveImage image)
     {
-        if (image is null)
-            throw new ArgumentNullException(nameof(image));
+        ArgumentNullException.ThrowIfNull(image);
 
         using var ms = new MemoryStream();
 
@@ -69,7 +68,7 @@ public sealed class CpioArchivator : IArchivator
         var writtenRoots = new HashSet<ArchiveHardLinkKey>();
         uint nextInode = 1;
 
-        foreach (var entry in image.Entries)
+        foreach (ArchiveEntry entry in image.Entries)
         {
             WriteNewcEntry(ms, entry, hardLinkGroups, writtenRoots, ref nextInode);
         }
@@ -124,7 +123,7 @@ public sealed class CpioArchivator : IArchivator
         if (fileSize < 0 || fileSize > int.MaxValue || offset + fileSize > data.Length)
             throw new InvalidDataException($"Truncated CPIO payload for '{name}'.");
 
-        byte[] payload = fileSize == 0 ? Array.Empty<byte>() : ArchivePath.CopyBytes(data, offset, (int)fileSize);
+        byte[] payload = fileSize == 0 ? [] : ArchivePath.CopyBytes(data, offset, (int)fileSize);
 
         if (validateCrc)
         {
@@ -149,7 +148,7 @@ public sealed class CpioArchivator : IArchivator
                 {
                     Path = path,
                     Kind = ArchiveEntryKind.Directory,
-                    Data = Array.Empty<byte>(),
+                    Data = [],
                     Mode = (int)(mode & 0x1FF),
                     UserId = (int)uid,
                     GroupId = (int)gid,

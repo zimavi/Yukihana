@@ -91,7 +91,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
     {
         path = FsPath.NormalizeRelative(path);
 
-        var node = FindExactNode(path);
+        Node? node = FindExactNode(path);
         return node?.Kind ?? FsNodeKind.Missing;
     }
 
@@ -99,7 +99,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
     {
         target = string.Empty;
 
-        var node = FindExactNode(FsPath.NormalizeRelative(path));
+        Node? node = FindExactNode(FsPath.NormalizeRelative(path));
         if (node is null)
             return false;
 
@@ -112,7 +112,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
 
     public bool TryGetMetadata(string path, out VfsMetadata metadata)
     {
-        var node = FindExactNode(FsPath.NormalizeRelative(path));
+        Node? node = FindExactNode(FsPath.NormalizeRelative(path));
         if (node is null)
         {
             metadata = default;
@@ -137,7 +137,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
         if (totalBytes < used)
             return Option<KernelError>.Some(KernelError.InvalidOp(
                 $"Cannot resize TempFs below currently used space. Used={used}, requested={totalBytes}"));
-        
+
         _totalBytes = totalBytes;
         return Option<KernelError>.None();
     }
@@ -146,7 +146,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
     {
         path = FsPath.NormalizeRelative(path);
 
-        var node = FindExactNode(path);
+        Node? node = FindExactNode(path);
         if (node is null)
             return Result<byte[], KernelError>.Failure(KernelError.NotFound(path));
 
@@ -187,11 +187,11 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
         if (createMissing || truncateExisting || append)
         {
             string parentPath = FsPath.GetParent(path);
-            if (!TryEnsureDirectory(parentPath, recursive: true, out var dirError))
+            if (!TryEnsureDirectory(parentPath, recursive: true, out KernelError dirError))
                 return Result<Stream, KernelError>.Failure(dirError);
         }
 
-        var node = FindExactNode(path);
+        Node? node = FindExactNode(path);
 
         switch (mode)
         {
@@ -262,19 +262,19 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot write to the root directory."));
 
-        if (!TryEnsureDirectory(FsPath.GetParent(path), recursive: true, out var dirError))
+        if (!TryEnsureDirectory(FsPath.GetParent(path), recursive: true, out KernelError dirError))
             return Option<KernelError>.Some(dirError);
 
         string parentPath = FsPath.GetParent(path);
         string name = FsPath.GetFileName(path);
 
-        var parent = FindExactNode(parentPath);
+        Node? parent = FindExactNode(parentPath);
         if (parent is null || parent.Kind != FsNodeKind.Directory)
             return Option<KernelError>.Some(KernelError.NotFound(parentPath));
 
         byte[] copy = CloneBytes(data);
 
-        if (parent.Children.TryGetValue(name, out var existing))
+        if (parent.Children.TryGetValue(name, out Node? existing))
         {
             if (existing.Kind == FsNodeKind.Directory)
             {
@@ -282,13 +282,13 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
                     KernelError.InvalidOp($"Cannot overwrite directory with file: {path}"));
             }
 
-            if (!TryReplaceLeaf(existing, FsNodeKind.File, copy, null, copy.Length, out var error))
+            if (!TryReplaceLeaf(existing, FsNodeKind.File, copy, null, copy.Length, out KernelError error))
                 return Option<KernelError>.Some(error);
 
             return Option<KernelError>.None();
         }
 
-        if (!TryCreateLeaf(parent, name, CreateFileLeaf(copy), out var createError))
+        if (!TryCreateLeaf(parent, name, CreateFileLeaf(copy), out KernelError createError))
             return Option<KernelError>.Some(createError);
 
         return Option<KernelError>.None();
@@ -301,7 +301,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.None();
 
-        return TryEnsureDirectory(path, recursive, out var error)
+        return TryEnsureDirectory(path, recursive, out KernelError error)
             ? Option<KernelError>.None()
             : Option<KernelError>.Some(error);
     }
@@ -314,19 +314,19 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot create a symlink at the root directory."));
 
-        if (!TryEnsureDirectory(FsPath.GetParent(path), recursive: true, out var dirError))
+        if (!TryEnsureDirectory(FsPath.GetParent(path), recursive: true, out KernelError dirError))
             return Option<KernelError>.Some(dirError);
 
         string parentPath = FsPath.GetParent(path);
         string name = FsPath.GetFileName(path);
 
-        var parent = FindExactNode(parentPath);
+        Node? parent = FindExactNode(parentPath);
         if (parent is null || parent.Kind != FsNodeKind.Directory)
             return Option<KernelError>.Some(KernelError.NotFound(parentPath));
 
         long targetSize = Encoding.UTF8.GetByteCount(target);
 
-        if (parent.Children.TryGetValue(name, out var existing))
+        if (parent.Children.TryGetValue(name, out Node? existing))
         {
             if (existing.Kind == FsNodeKind.Directory)
             {
@@ -334,7 +334,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
                     KernelError.InvalidOp($"Cannot overwrite directory with symlink: {path}"));
             }
 
-            if (!TryReplaceLeaf(existing, FsNodeKind.SymbolicLink, null, target, targetSize, out var error))
+            if (!TryReplaceLeaf(existing, FsNodeKind.SymbolicLink, null, target, targetSize, out KernelError error))
                 return Option<KernelError>.Some(error);
 
             return Option<KernelError>.None();
@@ -343,8 +343,8 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
         if (targetSize > (long)FreeBytes)
             return Option<KernelError>.Some(KernelError.NoSpaceLeft());
 
-        var node = CreateSymlinkLeaf(target, targetSize);
-        if (!TryCreateLeaf(parent, name, node, out var createError))
+        Node node = CreateSymlinkLeaf(target, targetSize);
+        if (!TryCreateLeaf(parent, name, node, out KernelError createError))
             return Option<KernelError>.Some(createError);
 
         return Option<KernelError>.None();
@@ -358,13 +358,13 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot delete the root directory."));
 
         string parentPath = FsPath.GetParent(path);
-        var parent = FindExactNode(parentPath);
+        Node? parent = FindExactNode(parentPath);
 
         if (parent is null || parent.Kind != FsNodeKind.Directory)
             return Option<KernelError>.Some(KernelError.NotFound(parentPath));
 
         string name = FsPath.GetFileName(path);
-        if (!parent.Children.TryGetValue(name, out var node))
+        if (!parent.Children.TryGetValue(name, out Node? node))
             return Option<KernelError>.Some(KernelError.NotFound(path));
 
         BubbleSubtreeDelta(parent, -node.SubtreeSize);
@@ -378,14 +378,14 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
     {
         path = FsPath.NormalizeRelative(path);
 
-        var node = FindExactNode(path);
+        Node? node = FindExactNode(path);
         if (node is null)
             return Result<string[], KernelError>.Failure(KernelError.NotFound(path));
 
         if (node.Kind != FsNodeKind.Directory)
             return Result<string[], KernelError>.Failure(KernelError.Corrupted($"Path is not a directory: {path}"));
 
-        var items = node.Children.Keys.ToArray();
+        string[] items = node.Children.Keys.ToArray();
         Array.Sort(items, StringComparer.Ordinal);
         return items;
     }
@@ -394,7 +394,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
     {
         path = FsPath.NormalizeRelative(path);
 
-        var node = FindExactNode(path);
+        Node? node = FindExactNode(path);
         if (node is null)
             return Option<KernelError>.Some(KernelError.NotFound(path));
 
@@ -405,13 +405,13 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
     private Node CreateEmptyFileNode(string path)
     {
         string parentPath = FsPath.GetParent(path);
-        var parent = FindExactNode(parentPath);
+        Node? parent = FindExactNode(parentPath);
 
         if (parent is null || parent.Kind != FsNodeKind.Directory)
             throw new DirectoryNotFoundException(parentPath);
 
         string name = FsPath.GetFileName(path);
-        var node = CreateFileLeaf(Array.Empty<byte>());
+        Node node = CreateFileLeaf([]);
         AttachChild(parent, name, node);
         return node;
     }
@@ -610,11 +610,11 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return _root;
 
-        var current = _root;
+        Node current = _root;
 
-        foreach (var segment in FsPath.SplitRelative(path))
+        foreach (string segment in FsPath.SplitRelative(path))
         {
-            if (!current.Children.TryGetValue(segment, out var next))
+            if (!current.Children.TryGetValue(segment, out Node? next))
                 return null;
 
             current = next;
@@ -644,7 +644,7 @@ public sealed class TempFs(ulong totalBytes) : IVfsBackend
             string segment = parts[i];
             string nextPath = string.IsNullOrEmpty(currentPath) ? segment : currentPath + "/" + segment;
 
-            if (!current.Children.TryGetValue(segment, out var next))
+            if (!current.Children.TryGetValue(segment, out Node? next))
             {
                 if (!recursive && i != parts.Length - 1)
                 {

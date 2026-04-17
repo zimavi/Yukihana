@@ -12,14 +12,14 @@ public static partial class VFS
 {
     public static Result<byte[], KernelError> ReadAllBytes(string path)
     {
-        var resolved = ResolvePath(path, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(path, followFinalSymlink: true);
         if (resolved.IsFailure)
             return Result<byte[], KernelError>.Failure(resolved.Error);
 
         if (resolved.Value.Kind != FsNodeKind.File)
             return Result<byte[], KernelError>.Failure(KernelError.NotFound(path));
 
-        var metadata = resolved.Value.Metadata;
+        VfsMetadata metadata = resolved.Value.Metadata;
 
         if (!FsPermissionUtil.CanRead(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
@@ -47,7 +47,7 @@ public static partial class VFS
         if (mode == FileMode.Append && (access & FileAccess.Write) == 0)
             return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Append requires write access: {absolute}"));
 
-        var resolved = ResolvePath(absolute, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(absolute, followFinalSymlink: true);
 
         if (!resolved.IsFailure && resolved.Value.Kind == FsNodeKind.Directory)
             return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Path is a directory: {absolute}"));
@@ -64,7 +64,7 @@ public static partial class VFS
             return Result<Stream, KernelError>.Failure(KernelError.NotFound(absolute));
 
         string parentAbsolute = FsPath.GetParent(absolute);
-        var parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
 
         if (parentResolved.IsFailure)
             return Result<Stream, KernelError>.Failure(parentResolved.Error);
@@ -97,7 +97,7 @@ public static partial class VFS
 
         string absolute = ToAbsolute(path);
 
-        var resolved = ResolvePath(absolute, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(absolute, followFinalSymlink: true);
         VfsMetadata metadata;
         if (!resolved.IsFailure && resolved.Value.Kind == FsNodeKind.File)
         {
@@ -112,7 +112,7 @@ public static partial class VFS
         }
 
         string parentAbsolute = FsPath.GetParent(absolute);
-        var parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
         if (parentResolved.IsFailure)
             return Option<KernelError>.Some(parentResolved.Error);
 
@@ -145,16 +145,16 @@ public static partial class VFS
     {
         string absolute = ToAbsolute(path);
 
-        var resolved = ResolvePath(absolute, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(absolute, followFinalSymlink: true);
         if (!resolved.IsFailure && resolved.Value.Kind == FsNodeKind.Directory)
             return Option<KernelError>.None();
 
         string parentAbsolute = FsPath.GetParent(absolute);
-        var parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
         if (parentResolved.IsFailure)
             return Option<KernelError>.Some(parentResolved.Error);
 
-        var metadata = parentResolved.Value.Metadata;
+        VfsMetadata metadata = parentResolved.Value.Metadata;
 
         if (!FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
@@ -176,15 +176,15 @@ public static partial class VFS
         string absolute = ToAbsolute(path);
         target = FsPath.SanitizeSymlinkTarget(target);
 
-        var noFollowResolved = ResolvePath(absolute, followFinalSymlink: false);
+        Result<ResolvedPath, KernelError> noFollowResolved = ResolvePath(absolute, followFinalSymlink: false);
         if (!noFollowResolved.IsFailure && noFollowResolved.Value.Kind != FsNodeKind.Missing)
             return Option<KernelError>.Some(KernelError.InvalidOp($"Path already exists: {absolute}"));
 
-        var parentResolved = ResolvePath(FsPath.GetParent(absolute), followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> parentResolved = ResolvePath(FsPath.GetParent(absolute), followFinalSymlink: true);
         if (parentResolved.IsFailure)
             return Option<KernelError>.Some(parentResolved.Error);
-        
-        var metadata = parentResolved.Value.Metadata;
+
+        VfsMetadata metadata = parentResolved.Value.Metadata;
 
         if (!FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
@@ -204,16 +204,16 @@ public static partial class VFS
     {
         string absolute = ToAbsolute(path);
 
-        var noFollowResolved = ResolvePath(absolute, followFinalSymlink: false);
+        Result<ResolvedPath, KernelError> noFollowResolved = ResolvePath(absolute, followFinalSymlink: false);
         if (noFollowResolved.IsFailure || noFollowResolved.Value.Kind == FsNodeKind.Missing)
             return Option<KernelError>.Some(KernelError.NotFound(absolute));
-        
+
         string parentAbsolute = FsPath.GetParent(absolute);
-        var parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> parentResolved = ResolvePath(parentAbsolute, followFinalSymlink: true);
         if (parentResolved.IsFailure)
             return Option<KernelError>.Some(parentResolved.Error);
-        
-        var metadata = parentResolved.Value.Metadata;
+
+        VfsMetadata metadata = parentResolved.Value.Metadata;
         if (!FsPermissionUtil.CanWrite(metadata.Permissions, CurrentCredentials, metadata.UserId, metadata.GroupId))
         {
             s_logger.Warn($"permission denied: write in {parentResolved.Value.AbsolutePath}");
@@ -225,33 +225,33 @@ public static partial class VFS
 
     public static Result<string[], KernelError> List(string path)
     {
-        var resolved = ResolvePath(path, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(path, followFinalSymlink: true);
         if (resolved.IsFailure)
             return Result<string[], KernelError>.Failure(resolved.Error);
 
         if (resolved.Value.Kind != FsNodeKind.Directory)
             return Result<string[], KernelError>.Failure(KernelError.InvalidOp($"Path is not a directory: {path}"));
-        
-        var metadata = resolved.Value.Metadata;
+
+        VfsMetadata metadata = resolved.Value.Metadata;
         if (!FsPermissionUtil.CanRead(
-            resolved.Value.Metadata.Permissions, 
-            CurrentCredentials, 
-            metadata.UserId, 
+            resolved.Value.Metadata.Permissions,
+            CurrentCredentials,
+            metadata.UserId,
             metadata.GroupId))
         {
             s_logger.Warn($"permission denied: read {resolved.Value.AbsolutePath}");
             return Result<string[], KernelError>.Failure(KernelError.PermissionsDenied($"read {resolved.Value.AbsolutePath}"));
         }
 
-        var backendResult = resolved.Value.Mount.Backend.List(resolved.Value.RelativePath);
+        Result<string[], KernelError> backendResult = resolved.Value.Mount.Backend.List(resolved.Value.RelativePath);
         if (backendResult.IsFailure)
             return backendResult;
-        
+
         var entries = new HashSet<string>(backendResult.Value, StringComparer.Ordinal);
 
         string currentAbs = resolved.Value.AbsolutePath;
 
-        foreach (var mount in s_mounts)
+        foreach (MountInfo mount in s_mounts)
         {
             string mountPoint = mount.MountPoint;
 

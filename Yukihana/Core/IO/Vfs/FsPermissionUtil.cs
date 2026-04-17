@@ -10,56 +10,56 @@ public static class FsPermissionUtil
 
     public static int ToUnixMode(FsPermissions permissions) =>
         (int)permissions & 0x1FFF;
-    
+
     public static bool CanRead(
-        FsPermissions permissions, 
-        VfsCredentials credentials, 
-        int ownerId, 
+        FsPermissions permissions,
+        VfsCredentials credentials,
+        int ownerId,
         int groupId) =>
         credentials.IsRoot
             || (credentials.UserId == ownerId && (permissions & FsPermissions.UserRead) != 0)
             || (credentials.GroupId == groupId && (permissions & FsPermissions.GroupRead) != 0)
             || (permissions & FsPermissions.OtherRead) != 0;
-    
+
     public static bool CanWrite(
-        FsPermissions permissions, 
-        VfsCredentials credentials, 
-        int ownerId, 
+        FsPermissions permissions,
+        VfsCredentials credentials,
+        int ownerId,
         int groupId) =>
         credentials.IsRoot
             || (credentials.UserId == ownerId && (permissions & FsPermissions.UserWrite) != 0)
             || (credentials.GroupId == groupId && (permissions & FsPermissions.GroupWrite) != 0)
             || (permissions & FsPermissions.OtherWrite) != 0;
-    
+
     public static bool CanExecute(
-        FsPermissions permissions, 
-        VfsCredentials credentials, 
-        int ownerId, 
+        FsPermissions permissions,
+        VfsCredentials credentials,
+        int ownerId,
         int groupId) =>
         credentials.IsRoot
             || (credentials.UserId == ownerId && (permissions & FsPermissions.UserExecute) != 0)
             || (credentials.GroupId == groupId && (permissions & FsPermissions.GroupExecute) != 0)
             || (permissions & FsPermissions.OtherExecute) != 0;
-    
+
     public static bool CanAccess(
-        FsPermissions permissions, 
-        FsAccess access, 
-        VfsCredentials credentials, 
-        int ownerId, 
+        FsPermissions permissions,
+        FsAccess access,
+        VfsCredentials credentials,
+        int ownerId,
         int groupId)
     {
-        if(credentials.IsRoot)
+        if (credentials.IsRoot)
             return true;
-        
+
         if ((access & FsAccess.Read) != 0 && !CanRead(permissions, credentials, ownerId, groupId))
             return false;
-        
+
         if ((access & FsAccess.Write) != 0 && !CanWrite(permissions, credentials, ownerId, groupId))
             return false;
-        
+
         if ((access & FsAccess.Execute) != 0 && !CanExecute(permissions, credentials, ownerId, groupId))
             return false;
-        
+
         return true;
     }
 

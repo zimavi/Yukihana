@@ -11,7 +11,7 @@ namespace Yukihana.Core.Primitives;
 /// <typeparam name="TError">The type of failure error value.</typeparam>
 public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError>>, IDisposable
 {
-#region Properties & fields
+    #region Properties & fields
 
     private readonly TValue? _value;
     private readonly TError? _error;
@@ -38,9 +38,9 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     /// <exception cref="InvalidOperationException">Thrown when the result is a success.</exception>
     public TError Error => IsFailure ? _error! : throw new InvalidOperationException("Result is a success.");
 
-#endregion
+    #endregion
 
-#region Constructor & factory methods
+    #region Constructor & factory methods
 
     private Result(TValue? value, TError? error, bool isSuccess)
     {
@@ -59,9 +59,9 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     /// </summary>
     public static Result<TValue, TError> Failure(TError error) => new(value: default, error, isSuccess: false);
 
-#endregion
+    #endregion
 
-#region IDisposable
+    #region IDisposable
 
     public void Dispose()
     {
@@ -77,9 +77,9 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
             disposable.Dispose();
     }
 
-#endregion
+    #endregion
 
-#region Methods
+    #region Methods
 
     /// <summary>
     /// Attempts to retrieve the successful value.
@@ -188,7 +188,7 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     /// </summary>
     public void Switch(Action<TValue> success, Action<TError> failure)
     {
-        if(IsSuccess)
+        if (IsSuccess)
             success(_value!);
         else
             failure(_error!);
@@ -204,9 +204,9 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
         error = _error;
     }
 
-#endregion
+    #endregion
 
-#region Object overrides & interface implementations
+    #region Object overrides & interface implementations
 
     public override string ToString() => IsSuccess ? $"Success({_value})" : $"Failure({_error})";
 
@@ -215,7 +215,7 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
         if (IsSuccess != other.IsSuccess)
             return false;
 
-        return IsSuccess 
+        return IsSuccess
             ? EqualityComparer<TValue>.Default.Equals(_value, other._value)
             : EqualityComparer<TError>.Default.Equals(_error, other._error);
     }
@@ -227,11 +227,11 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
             ? EqualityComparer<TValue>.Default.GetHashCode(_value!)
             : EqualityComparer<TError>.Default.GetHashCode(_error!);
 
-#endregion
+    #endregion
 
-#region Operator overloads
+    #region Operator overloads
 
-    public static bool operator ==(Result<TValue, TError>? left, Result<TValue, TError>? right) => 
+    public static bool operator ==(Result<TValue, TError>? left, Result<TValue, TError>? right) =>
         EqualityComparer<Result<TValue, TError>?>.Default.Equals(left, right);
     public static bool operator !=(Result<TValue, TError>? left, Result<TValue, TError>? right) => !(left == right);
 
@@ -240,5 +240,5 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
 
     public static implicit operator Result<TValue, TError>(TValue value) => Success(value);
 
-#endregion
+    #endregion
 }

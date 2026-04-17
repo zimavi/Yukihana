@@ -7,13 +7,13 @@ namespace Yukihana.Core.Debug;
 
 public static class KernelLog
 {
-    private static readonly List<LogEntry> _entries = [];
+    private static readonly List<LogEntry> s_entries = [];
 
-    public static IReadOnlyList<LogEntry> Entries => _entries;
-    public static LogLevel SerialLevel = LogLevel.Info;
+    public static IReadOnlyList<LogEntry> Entries => s_entries;
 
-    public static bool LogToScreen = false;
-    public static bool LogToUart = true;
+    public static LogLevel SerialLevel { get; set; } = LogLevel.Info;
+    public static bool LogToScreen { get; set; }
+    public static bool LogToUart { get; set; } = true;
 
     public static void Write(
         LogLevel level,
@@ -32,7 +32,7 @@ public static class KernelLog
             file,
             line);
 
-        _entries.Add(entry);
+        s_entries.Add(entry);
 
         if (level >= SerialLevel && LogToUart)
             Serial.WriteString(FormatForSerial(entry) + "\n");
@@ -43,7 +43,7 @@ public static class KernelLog
 
     private static string FormatForSerial(LogEntry e)
     {
-        var delta = e.Time - Kernel.BootTime;
+        TimeSpan delta = e.Time - Kernel.BootTime;
         return string.IsNullOrWhiteSpace(e.Source)
             ? $"[{delta.TotalSeconds,10:0.000000}] [{e.Level}] {e.Message}"
             : $"[{delta.TotalSeconds,10:0.000000}] [{e.Level}] {e.Source}: {e.Message}";

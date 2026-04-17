@@ -73,7 +73,7 @@ public static partial class VFS
 
         return false;
     }
-        
+
     public static void Remount(string mountPoint, string oldMountPoint, IVfsBackend backend)
     {
         ArgumentNullException.ThrowIfNull(backend);
@@ -141,25 +141,25 @@ public static partial class VFS
 
     public static bool Exists(string path)
     {
-        var resolved = ResolvePath(path, followFinalSymlink: false);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(path, followFinalSymlink: false);
         return !resolved.IsFailure && resolved.Value.Kind != FsNodeKind.Missing;
     }
 
     public static bool FileExists(string path)
     {
-        var resolved = ResolvePath(path, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(path, followFinalSymlink: true);
         return resolved.IsSuccess && resolved.Value.Kind == FsNodeKind.File;
     }
 
     public static bool DirectoryExists(string path)
     {
-        var resolved = ResolvePath(path, followFinalSymlink: true);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(path, followFinalSymlink: true);
         return resolved.IsSuccess && resolved.Value.Kind == FsNodeKind.Directory;
     }
 
     public static FsNodeKind GetKind(string path)
     {
-        var resolved = ResolvePath(path, followFinalSymlink: false);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(path, followFinalSymlink: false);
         return resolved.IsFailure ? FsNodeKind.Missing : resolved.Value.Kind;
     }
 

@@ -11,6 +11,7 @@ using Yukihana.Core.IO;
 using Yukihana.Core.IO.Loaders;
 using Yukihana.Core.IO.Loaders.Optional;
 using Yukihana.Core.IO.Vfs.Backends;
+using Yukihana.Core.Primitives;
 using Yukihana.Core.Resources;
 using Yukihana.Core.Security;
 using Sys = Cosmos.Kernel.System;
@@ -58,7 +59,7 @@ public class Kernel : Sys.Kernel
         //
         // STAGE 1 -> Early boot
         //
-        
+
         var logger = new Logger("init");
 
         logger.Info($"Fetching \"{RAMFS_FILE}\".");
@@ -69,7 +70,7 @@ public class Kernel : Sys.Kernel
         using (var result = assembly.GetManifestResourceStream(_ramfs_resource_key).ToOption())
         using (var memStream = new MemoryStream())
         {
-            var stream = result.OrPanic($"Unable to locate \"{RAMFS_FILE}\".");
+            Stream stream = result.OrPanic($"Unable to locate \"{RAMFS_FILE}\".");
             stream.CopyTo(memStream);
             ramfsBytes = memStream.ToArray();
         }
@@ -81,16 +82,16 @@ public class Kernel : Sys.Kernel
         VFS.Mount("/", initramfs);
 
         var fontGroup = new OptionalResourceGroup<FontState>(
-            name:           "Fonts",
-            createState:    () => new FontState(),
-            commit:         state => {},
-            provider:       new VfsResourceProvider()
+            name: "Fonts",
+            createState: () => new FontState(),
+            commit: state => { },
+            provider: new VfsResourceProvider()
         );
 
         fontGroup.Add(
-            relativePath:   "/usr/share/fonts/zap-ext-light18.psf", 
-            description:    "Console font", 
-            applyCallback:  (s, data) => s.Font = PCScreenFont.LoadFont(data)
+            relativePath: "/usr/share/fonts/zap-ext-light18.psf",
+            description: "Console font",
+            applyCallback: (s, data) => s.Font = PCScreenFont.LoadFont(data)
         );
 
         fontGroup.TryLoad().Switch(
@@ -99,7 +100,7 @@ public class Kernel : Sys.Kernel
                 KernelConsole.Default!.Font = some.Font;
                 logger.Info("Applyied font to console.");
             },
-            none: () => {}
+            none: () => { }
         );
 
         logger.Info("Mounting partitions.");
@@ -115,7 +116,7 @@ public class Kernel : Sys.Kernel
 
         VFS.Mount("/etc", new TempFs());
 
-        var store = UserSystemInitializer.CreateDefault();
+        IUserStore store = UserSystemInitializer.CreateDefault();
 
         if (!VFS.FileExists("/etc/passwd") || !VFS.FileExists("/etc/shadow") || !VFS.FileExists("/etc/group"))
         {
@@ -129,9 +130,9 @@ public class Kernel : Sys.Kernel
         }
         else
         {
-            var passwd = VFS.ReadAllText("/etc/passwd");
-            var shadow = VFS.ReadAllText("/etc/shadow");
-            var group = VFS.ReadAllText("/etc/group");
+            Result<string, KernelError> passwd = VFS.ReadAllText("/etc/passwd");
+            Result<string, KernelError> shadow = VFS.ReadAllText("/etc/shadow");
+            Result<string, KernelError> group = VFS.ReadAllText("/etc/group");
 
             if (passwd.IsSuccess && shadow.IsSuccess && group.IsSuccess)
             {
@@ -162,7 +163,7 @@ public class Kernel : Sys.Kernel
     protected override void AfterRun()
     {
         Console.WriteLine("\n");
-        
+
         s_kernelLogger.Info("Reached AfterRun().");
 
         s_kernelLogger.Info("Kernel cleanup finished.");

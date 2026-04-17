@@ -23,7 +23,7 @@ public static class FsPath
 
         var parts = new List<string>(16);
 
-        foreach (var segment in path.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        foreach (string segment in path.Split('/', StringSplitOptions.RemoveEmptyEntries))
         {
             if (segment == ".")
                 continue;

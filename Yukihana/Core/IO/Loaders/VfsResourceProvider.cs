@@ -10,9 +10,9 @@ public sealed class VfsResourceProvider : IResourceProvider
 {
     public Option<byte[]> TryLoad(string relativePath)
     {
-        if(!VFS.Exists(relativePath))
+        if (!VFS.Exists(relativePath))
             return Option<byte[]>.None();
-        
+
         return VFS.ReadAllBytes(relativePath).ToOption();
     }
 }

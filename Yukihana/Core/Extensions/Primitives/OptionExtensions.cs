@@ -7,7 +7,7 @@ namespace Yukihana.Core.Extensions.Primitives;
 
 public static partial class OptionExtensions
 {
-    
+
     extension<T>(Option<T> option)
     {
         public Option<TResult> Select<TResult>(Func<T, TResult> map) => option.Map(map);
@@ -21,23 +21,23 @@ public static partial class OptionExtensions
 
         public bool IsSomeAnd(Func<T, bool> predicate) =>
             option.IsSome && predicate(option.Value);
-        
+
         public Option<T> Filter(Func<T, bool> predicate) =>
             option.IsSome && predicate(option.Value)
                 ? option
                 : Option<T>.None();
-        
+
         public Option<T> OnSome(Action<T> action)
         {
             if (option.IsSome)
                 action(option.Value);
-            
+
             return option;
         }
 
         public Option<T> OrElse(Func<Option<T>> fallback) =>
             option.IsSome ? option : fallback();
-        
+
         public Option<T> Or(Option<T> fallback) =>
             option.IsSome ? option : fallback;
 
@@ -45,7 +45,7 @@ public static partial class OptionExtensions
             option.IsSome && other.IsSome
                 ? Option<(T, TOther)>.Some((option.Value, other.Value))
                 : Option<(T, TOther)>.None();
-            
+
         public Option<T> Flatten() =>
             option.IsSome && option.Value is Option<T> inner
                 ? inner
@@ -53,7 +53,7 @@ public static partial class OptionExtensions
 
         public T? ToNullable() =>
             option.IsSome ? option.Value : default;
-        
+
         public IEnumerable<T> AsEnumerable()
         {
             if (option.IsSome)

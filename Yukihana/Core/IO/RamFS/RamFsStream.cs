@@ -53,8 +53,7 @@ public sealed class RamFsStream : Stream
             if (!CanSeek)
                 throw new NotSupportedException("Seek is not supported.");
 
-            if (value < 0)
-                throw new ArgumentOutOfRangeException(nameof(value));
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
 
             _position = value > _backing.Length ? _backing.Length : value;
         }

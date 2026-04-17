@@ -30,7 +30,7 @@ public sealed class TarArchivator : IArchivator
 
         while (offset + 512 <= data.Length)
         {
-            var header = data.Slice(offset, 512);
+            ReadOnlySpan<byte> header = data.Slice(offset, 512);
 
             if (TarIsZeroBlock(header))
                 break;
@@ -154,7 +154,7 @@ public sealed class TarArchivator : IArchivator
 
         using var ms = new MemoryStream();
 
-        foreach (var entry in image.Entries)
+        foreach (ArchiveEntry entry in image.Entries)
         {
             WriteEntry(ms, entry);
         }

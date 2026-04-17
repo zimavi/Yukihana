@@ -19,7 +19,7 @@ public static class ConsoleRenderer
 
     private static void RenderKernel(LogEntry e)
     {
-        var delta = e.Time - Kernel.BootTime;
+        TimeSpan delta = e.Time - Kernel.BootTime;
 
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Console.Write($"[{delta.TotalSeconds,10:0.000000}] ");
@@ -35,7 +35,7 @@ public static class ConsoleRenderer
 
         Console.ResetColor();
     }
-    
+
     private static void RenderSystemd(LogEntry e)
     {
         Console.ForegroundColor = ConsoleColor.White;

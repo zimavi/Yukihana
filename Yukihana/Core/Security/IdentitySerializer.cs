@@ -3,6 +3,7 @@
 
 using System.Text;
 using Yukihana.Core.Debug;
+using Yukihana.Core.Primitives;
 
 namespace Yukihana.Core.Security;
 
@@ -24,7 +25,7 @@ public static class IdentitySerializer
     {
         var sb = new StringBuilder();
 
-        foreach(var user in users.OrderBy(user => user.Id))
+        foreach (User? user in users.OrderBy(user => user.Id))
         {
             s_logger.Info($"Serializing user \"{user.Name}\"");
 
@@ -51,7 +52,7 @@ public static class IdentitySerializer
     {
         var sb = new StringBuilder();
 
-        foreach (var user in users.OrderBy(user => user.Id))
+        foreach (User? user in users.OrderBy(user => user.Id))
         {
             s_logger.Info($"Serializing password for \"{user.Name}\"");
 
@@ -72,22 +73,22 @@ public static class IdentitySerializer
         var usersById = users.ToDictionary(user => user.Id, user => user.Name);
         var sb = new StringBuilder();
 
-        foreach (var group in groups.OrderBy(group => group.Id))
+        foreach (Group? group in groups.OrderBy(group => group.Id))
         {
             s_logger.Info($"Serializing group \"{group.Name}\"");
 
             ValidateName(group.Name);
 
-            var members = group.Members as ICollection<int> ?? group.Members.ToList();
+            ICollection<int> members = group.Members as ICollection<int> ?? group.Members.ToList();
 
             var namesSet = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach(var userId in members.OrderBy(id => id))
+            foreach (int userId in members.OrderBy(id => id))
             {
-                if (!usersById.TryGetValue(userId, out var userName))
+                if (!usersById.TryGetValue(userId, out string? userName))
                     throw new InvalidOperationException(
                         $"Group '{group.Name}' references unknown user id '{userId}'.");
-                    
+
                 namesSet.Add(userName);
             }
 
@@ -113,20 +114,20 @@ public static class IdentitySerializer
     {
         ArgumentNullException.ThrowIfNull(store);
 
-        var passwordHashes = ParseShadow(shadowText);
+        Dictionary<string, string> passwordHashes = ParseShadow(shadowText);
 
         foreach (var line in ReadMeaningfulLines(passwdText))
         {
-            var parts = SplitFields(line, 6, "passwd");
+            string[] parts = SplitFields(line, 6, "passwd");
 
-            var name = parts[0];
-            var passwordField = parts[1];
-            var userId = ParseInt(parts[2], "uid", line);
-            var primaryGroupId = ParseInt(parts[3], "gid", line);
-            var homeDirectory = parts[4];
-            var shell = parts[5];
+            string name = parts[0];
+            string passwordField = parts[1];
+            int userId = ParseInt(parts[2], "uid", line);
+            int primaryGroupId = ParseInt(parts[3], "gid", line);
+            string homeDirectory = parts[4];
+            string shell = parts[5];
 
-            var passwordHash = passwordHashes.TryGetValue(name, out var hash)
+            string passwordHash = passwordHashes.TryGetValue(name, out string? hash)
                 ? hash
                 : passwordField is "x" or "*" ? string.Empty : passwordField;
 
@@ -141,13 +142,13 @@ public static class IdentitySerializer
             store.AddUser(user);
         }
 
-        foreach (var line in ReadMeaningfulLines(groupText))
+        foreach (string line in ReadMeaningfulLines(groupText))
         {
-            var parts = SplitFields(line, 4, "group");
+            string[] parts = SplitFields(line, 4, "group");
 
-            var name = parts[0];
-            var groupId = ParseInt(parts[2], "gid", line);
-            var membersField = parts[3];
+            string name = parts[0];
+            int groupId = ParseInt(parts[2], "gid", line);
+            string membersField = parts[3];
 
             var group = new Group(groupId, name);
             store.AddGroup(group);
@@ -155,9 +156,9 @@ public static class IdentitySerializer
             if (string.IsNullOrWhiteSpace(membersField))
                 continue;
 
-            foreach (var memberName in membersField.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (string memberName in membersField.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                var maybeUser = store.GetUserByName(memberName);
+                Option<User> maybeUser = store.GetUserByName(memberName);
                 if (maybeUser.IsNone)
                 {
                     throw new FormatException(
@@ -173,9 +174,9 @@ public static class IdentitySerializer
 
     private static void ApplySecondaryGroupIds(IUserStore store)
     {
-        foreach (var user in store.GetAllUsers().ToList())
+        foreach (User? user in store.GetAllUsers().ToList())
         {
-            var secondaryGroupIds = store.GetAllGroups()
+            int[] secondaryGroupIds = store.GetAllGroups()
                 .Where(group => group.Id != user.PrimaryGroupId && group.ContainsMember(user.Id))
                 .Select(group => group.Id)
                 .Distinct()
@@ -190,12 +191,12 @@ public static class IdentitySerializer
     {
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var line in ReadMeaningfulLines(shadowText))
+        foreach (string line in ReadMeaningfulLines(shadowText))
         {
-            var parts = SplitFields(line, 2, "shadow");
+            string[] parts = SplitFields(line, 2, "shadow");
 
-            var name = parts[0];
-            var hash = parts[1];
+            string name = parts[0];
+            string hash = parts[1];
 
             result[name] = hash;
         }
@@ -209,7 +210,7 @@ public static class IdentitySerializer
 
         while (reader.ReadLine() is { } rawLine)
         {
-            var line = rawLine.Trim();
+            string line = rawLine.Trim();
 
             if (line.Length == 0)
                 continue;
@@ -223,7 +224,7 @@ public static class IdentitySerializer
 
     private static string[] SplitFields(string line, int expectedFieldCount, string fileKind)
     {
-        var parts = line.Split(':');
+        string[] parts = line.Split(':');
 
         if (parts.Length != expectedFieldCount)
         {

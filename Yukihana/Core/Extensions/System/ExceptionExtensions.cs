@@ -11,7 +11,7 @@ namespace Yukihana.Core.Extensions.System;
 
 public static partial class ExceptionExtensions
 {
-    extension (Exception ex)
+    extension(Exception ex)
     {
         public void Panic(
             string? message = null,

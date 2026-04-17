@@ -8,15 +8,15 @@ namespace Yukihana.Core.Compression.Archives;
 
 public static class ArchivatorFactory
 {
-    private static readonly IArchivator[] _archivators =
-    {
+    private static readonly IArchivator[] s_archivators =
+    [
         new CpioArchivator(),
         new TarArchivator(),
-    };
+    ];
 
     public static Option<IArchivator> Detect(ReadOnlySpan<byte> data)
     {
-        foreach (var archivator in _archivators)
+        foreach (IArchivator archivator in s_archivators)
         {
             if (archivator.CanRead(data))
                 return Option<IArchivator>.Some(archivator);
@@ -25,6 +25,6 @@ public static class ArchivatorFactory
         return Option<IArchivator>.None();
     }
 
-    public static ArchiveImage Open(ReadOnlySpan<byte> data) => 
+    public static ArchiveImage Open(ReadOnlySpan<byte> data) =>
         Detect(data).OrThrow("Unknown archive format.").Read(data);
 }

@@ -16,7 +16,7 @@ public static class ArchiveCompressorFactory
             new Bzip2ArchiveCompressor(),
         ];
 
-        foreach (var compressor in compressors)
+        foreach (IArchiveCompressor compressor in compressors)
         {
             if (compressor.IsSupportedFormat(data))
                 return Option<IArchiveCompressor>.Some(compressor);

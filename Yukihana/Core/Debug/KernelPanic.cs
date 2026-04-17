@@ -32,12 +32,12 @@ public static class KernelPanic
 
         Print("\n--- Last log entries ---", ConsoleColor.DarkGray);
 
-        var logs = SnapshotLogs();
+        LogEntry[] logs = SnapshotLogs();
         int start = Math.Max(0, logs.Length - 20);
 
         for (int i = start; i < logs.Length; i++)
         {
-            var e = logs[i];
+            LogEntry e = logs[i];
             TimeSpan delta = e.Time - Kernel.BootTime;
             Console.WriteLine($"[{delta.TotalSeconds,10:0.000000}] {e.Source}: {e.Message}");
         }
@@ -48,7 +48,7 @@ public static class KernelPanic
 
         PlatformHAL.CpuOps?.Halt();
 
-        for (;;);
+        for (; ; );
     }
 
     private static void MinimalFailSafePanic(string reason)
@@ -78,14 +78,14 @@ public static class KernelPanic
         Serial.WriteString($"Reason: {reason}\n");
         Serial.WriteString($"At: {m} ({Path.GetFileName(f)}:{l})\n");
 
-        foreach (var e in logs)
+        foreach (LogEntry e in logs)
         {
             TimeSpan delta = e.Time - Kernel.BootTime;
             Serial.WriteString($"[{delta.TotalSeconds,10:0.000000}] {e.Source}: {e.Message}\n");
         }
     }
 
-    private static LogEntry[] SnapshotLogs() => [..KernelLog.Entries];
+    private static LogEntry[] SnapshotLogs() => [.. KernelLog.Entries];
 
     // For some reason, using class' ToString causes kernel to freeze
     private static string KernelInfoString(KernelInfo info)

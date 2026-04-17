@@ -13,16 +13,16 @@ public static partial class EnumerableExtensions
             .Select(Option<T>.Some)
             .DefaultIfEmpty(Option<T>.None())
             .First();
-    
+
     public static Option<T[]> Collect<T>(this IEnumerable<Option<T>> source)
     {
         var list = new List<T>();
 
-        foreach(Option<T> item in source)
+        foreach (Option<T> item in source)
         {
             if (item.IsNone)
                 return Option<T[]>.None();
-            
+
             list.Add(item.Value);
         }
 

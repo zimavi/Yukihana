@@ -12,13 +12,13 @@ namespace Yukihana.Core.Primitives;
 /// <typeparam name="T">The type of contained value.</typeparam>
 public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDisposable
 {
-#region Properties & fields
+    #region Properties & fields
     private readonly T? _value;
 
     /// <summary>
     /// Gets a value indicating whether the option contains a value.
     /// </summary>
-    public bool IsSome { get; } 
+    public bool IsSome { get; }
 
     /// <summary>
     /// Gets a value indicating whether the option is empty.
@@ -31,9 +31,9 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
     /// <exception cref="InvalidOperationException">Thrown if the option is empty.</exception>
     public T Value => IsSome ? _value! : throw new InvalidOperationException("Option has no value.");
 
-#endregion
+    #endregion
 
-#region Constructor & factory methods
+    #region Constructor & factory methods
 
     private Option(T? value, bool isSome)
     {
@@ -45,7 +45,7 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
     /// Creates an option containg a value.
     /// </summary>
     /// <param name="value">The value to wrap.</param>
-    public static Option<T> Some(T value) => new (value, true);
+    public static Option<T> Some(T value) => new(value, true);
 
     /// <summary>
     /// Creates an empty option.
@@ -54,9 +54,9 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
 
     public static Option<T> From(T? value) => value is null ? None() : Some(value);
 
-#endregion
+    #endregion
 
-#region IDisposable
+    #region IDisposable
 
     public void Dispose()
     {
@@ -70,9 +70,9 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
             disposable.Dispose();
     }
 
-#endregion
+    #endregion
 
-#region Methods
+    #region Methods
 
     /// <summary>
     /// Retuns contained value if present; otherwise throws an exception.
@@ -136,18 +136,18 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
         return IsSome;
     }
 
-#endregion
+    #endregion
 
-#region Object overrides & interface implementations
+    #region Object overrides & interface implementations
 
     public bool Equals(Option<T> other)
     {
         if (IsSome != other.IsSome)
             return false;
-        
+
         if (IsNone)
             return true;
-        
+
         return EqualityComparer<T>.Default.Equals(_value, other._value);
     }
 
@@ -165,9 +165,9 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-#endregion
+    #endregion
 
-#region Operator overloads
+    #region Operator overloads
 
     public static bool operator ==(Option<T>? left, Option<T>? right) => EqualityComparer<Option<T>?>.Default.Equals(left, right);
     public static bool operator !=(Option<T>? left, Option<T>? right) => !(left == right);
@@ -180,5 +180,5 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
 
     public static explicit operator T(Option<T> self) => self.Value;
 
-#endregion
+    #endregion
 }

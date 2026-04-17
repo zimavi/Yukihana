@@ -15,24 +15,24 @@ public readonly struct KernelError(string code, string message)
     #region Helpers
 
     public override string ToString() => $"{Code}: {Message}";
-    
-#endregion
 
-#region Static errors
+    #endregion
+
+    #region Static errors
 
     public static class Codes
     {
-        public const string UNKNOWN             = "unknown";
-        public const string NOT_FOUND           = "not_found";
-        public const string CORRUPTED_DATA      = "corrupted_data";
-        public const string PERMISSION_DENIED   = "permission_denied";
-        public const string INVALID_OPERATION   = "invalid_operation";
-        public const string OUT_OF_SPACE        = "out_of_space";
+        public const string UNKNOWN = "unknown";
+        public const string NOT_FOUND = "not_found";
+        public const string CORRUPTED_DATA = "corrupted_data";
+        public const string PERMISSION_DENIED = "permission_denied";
+        public const string INVALID_OPERATION = "invalid_operation";
+        public const string OUT_OF_SPACE = "out_of_space";
     }
 
-#endregion
+    #endregion
 
-#region Factory methods
+    #region Factory methods
 
     public static KernelError NotFound(string path) => new(Codes.NOT_FOUND, path);
 
@@ -44,6 +44,6 @@ public readonly struct KernelError(string code, string message)
 
     public static KernelError NoSpaceLeft() => new(Codes.OUT_OF_SPACE, "No space left on device.");
 
-#endregion
+    #endregion
 
 }

@@ -8,15 +8,15 @@ public enum FsPermissions : ushort
 {
     None = 0,
 
-    OtherExecute    = 0x001,
-    OtherWrite      = 0x002,
-    OtherRead       = 0x004,
+    OtherExecute = 0x001,
+    OtherWrite = 0x002,
+    OtherRead = 0x004,
 
-    GroupExecute    = 0x008,
-    GroupRead       = 0x010,
-    GroupWrite      = 0x020,
+    GroupExecute = 0x008,
+    GroupRead = 0x010,
+    GroupWrite = 0x020,
 
-    UserExecute     = 0x040,
-    UserRead        = 0x080,
-    UserWrite       = 0x100,
+    UserExecute = 0x040,
+    UserRead = 0x080,
+    UserWrite = 0x100,
 }

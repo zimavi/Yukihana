@@ -16,25 +16,25 @@ public static partial class ResultExtensions
             result.IsSuccess
                 ? result
                 : Result<TValue, TError>.Success(handler(result.Error));
-        
+
         public Result<TValue, TError> RecoverWith(Func<TError, Result<TValue, TError>> handler) =>
             result.IsSuccess ? result : handler(result.Error);
-        
+
         public Result<TValue, TError> Ensure(Func<TValue, bool> predicate, Func<TError> errorFactory) =>
             result.IsSuccess && !predicate(result.Value)
                 ? Result<TValue, TError>.Failure(errorFactory())
                 : result;
-        
+
         public Result<(TValue, TOther), TError> Zip<TOther>(Result<TOther, TError> other) =>
             result.IsSuccess && other.IsSuccess
                 ? Result<(TValue, TOther), TError>.Success((result.Value, other.Value))
                 : result.IsFailure
                     ? Result<(TValue, TOther), TError>.Failure(result.Error)
                     : Result<(TValue, TOther), TError>.Failure(other.Error);
-        
+
         public Option<TValue> Ok() =>
             result.IsSuccess ? Option<TValue>.Some(result.Value) : Option<TValue>.None();
-        
+
         public Option<TError> Err() =>
             result.IsFailure ? Option<TError>.Some(result.Error) : Option<TError>.None();
 

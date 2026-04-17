@@ -44,7 +44,7 @@ public sealed class ProcFs : IVfsBackend
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static KernelError ReturnReadOnly() => 
+    private static KernelError ReturnReadOnly() =>
         KernelError.InvalidOp("Read-only filesystem.");
 
     #region Interface Implementation
@@ -77,9 +77,9 @@ public sealed class ProcFs : IVfsBackend
 
     public Result<string[], KernelError> List(string path)
     {
-        if(!string.IsNullOrEmpty(path.Trim('/')))
+        if (!string.IsNullOrEmpty(path.Trim('/')))
             return Result<string[], KernelError>.Failure(KernelError.NotFound(path));
-        
+
         return Result<string[], KernelError>.Success([.. _files.Keys]);
     }
 
@@ -87,10 +87,10 @@ public sealed class ProcFs : IVfsBackend
     {
         if (mode != FileMode.Open || (access & FileAccess.Write) != 0)
             return Result<Stream, KernelError>.Failure(ReturnReadOnly());
-        
+
         var bytesResult = ReadAllBytes(path);
         if (bytesResult.IsFailure) return Result<Stream, KernelError>.Failure(bytesResult.Error);
-        
+
         return Result<Stream, KernelError>.Success(new MemoryStream(bytesResult.Value, writable: false));
     }
 
@@ -98,7 +98,7 @@ public sealed class ProcFs : IVfsBackend
     {
         path = path.Trim('/');
 
-        if(_files.TryGetValue(path, out var generator))
+        if (_files.TryGetValue(path, out var generator))
         {
             return generator();
         }

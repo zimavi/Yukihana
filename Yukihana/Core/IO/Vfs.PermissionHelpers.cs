@@ -33,11 +33,11 @@ public static partial class VFS
 
     public static Option<KernelError> ChangeMode(string path, FsPermissions permissions)
     {
-        var resolved = ResolvePath(path, followFinalSymlink: false);
+        Result<ResolvedPath, KernelError> resolved = ResolvePath(path, followFinalSymlink: false);
 
-        if(resolved.IsFailure)
+        if (resolved.IsFailure)
             return Option<KernelError>.Some(resolved.Error);
-        
+
         s_logger.Info($"chmod: {resolved.Value.AbsolutePath} -> {FsPermissionUtil.ToSymbolicString(permissions)}");
         return resolved.Value.Mount.Backend.SetPermissions(resolved.Value.AbsolutePath, permissions);
     }

@@ -3,7 +3,7 @@
 
 namespace Yukihana.Core.Security;
 
-public sealed class Group (int id, string name)
+public sealed class Group(int id, string name)
 {
     public int Id { get; } = id;
     public string Name { get; } = name;
@@ -17,7 +17,7 @@ public sealed class Group (int id, string name)
 
     public void AddMembers(IEnumerable<int> userIds)
     {
-        foreach (var userId in userIds)
+        foreach (int userId in userIds)
             _members.Add(userId);
     }
 

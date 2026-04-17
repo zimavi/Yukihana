@@ -8,10 +8,9 @@ public sealed class ObjectPool<T> where T : class
     private readonly Func<T> _factory;
     private readonly Action<T>? _reset;
     private readonly T?[] _items;
-    private int _count;
 
     public int Capacity => _items.Length;
-    public int Count => _count;
+    public int Count { get; private set; }
 
     public ObjectPool(int capacity, Func<T> factory, Action<T>? reset = null)
     {
@@ -21,16 +20,16 @@ public sealed class ObjectPool<T> where T : class
         _items = new T[capacity];
         _factory = factory;
         _reset = reset;
-        _count = 0;
+        Count = 0;
     }
 
     public T Rent()
     {
-        if(_count == 0)
+        if (Count == 0)
             return _factory();
 
-        int idx = --_count;
-        
+        int idx = --Count;
+
         T obj = _items[idx]!;
         _items[idx] = null;
 
@@ -43,39 +42,39 @@ public sealed class ObjectPool<T> where T : class
 
         _reset?.Invoke(obj);
 
-        if(_count < _items.Length)
-            _items[_count++] = obj;
+        if (Count < _items.Length)
+            _items[Count++] = obj;
     }
 
     public void Clear(bool resetItems = false)
     {
         if (resetItems && _reset is not null)
         {
-            for (int i = 0; i < _count; i++)
+            for (int i = 0; i < Count; i++)
                 _reset(_items[i]!);
         }
 
-        Array.Clear(_items, 0, _count);
-        _count = 0;
+        Array.Clear(_items, 0, Count);
+        Count = 0;
     }
 
     public void Prewarm(int count)
     {
-        int toCreate = Math.Min(count, _items.Length - _count);
+        int toCreate = Math.Min(count, _items.Length - Count);
 
-        for(int i = 0; i < toCreate; i++)
-            _items[_count++] = _factory();
+        for (int i = 0; i < toCreate; i++)
+            _items[Count++] = _factory();
     }
 
     public bool TryRent(out T? value)
     {
-        if (_count == 0)
+        if (Count == 0)
         {
             value = null;
             return false;
         }
 
-        int index = --_count;
+        int index = --Count;
         value = _items[index];
         _items[index] = null;
         return true;

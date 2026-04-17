@@ -54,10 +54,10 @@ public sealed class OverlayFs : IVfsBackend
         if (IsHiddenByWhiteout(path))
             return false;
 
-        if (TryGetUpperMetadata(path, out var upperMeta) && upperMeta.Kind == FsNodeKind.SymbolicLink)
+        if (TryGetUpperMetadata(path, out VfsMetadata upperMeta) && upperMeta.Kind == FsNodeKind.SymbolicLink)
             return _upper.TryReadLink(path, out target);
 
-        if (TryGetLowerMetadata(path, out var lowerMeta) && lowerMeta.Kind == FsNodeKind.SymbolicLink)
+        if (TryGetLowerMetadata(path, out VfsMetadata lowerMeta) && lowerMeta.Kind == FsNodeKind.SymbolicLink)
             return _lower.TryReadLink(path, out target);
 
         return false;
@@ -91,7 +91,7 @@ public sealed class OverlayFs : IVfsBackend
     {
         path = Normalize(path);
 
-        if (!TryResolveEffectiveFile(path, out var backend, out var relativePath))
+        if (!TryResolveEffectiveFile(path, out IVfsBackend? backend, out string? relativePath))
             return Result<byte[], KernelError>.Failure(KernelError.NotFound(path));
 
         return backend.ReadAllBytes(relativePath);
@@ -118,7 +118,7 @@ public sealed class OverlayFs : IVfsBackend
         if (IsHiddenByWhiteout(path))
             return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
 
-        if (TryGetUpperMetadata(path, out var upperMeta))
+        if (TryGetUpperMetadata(path, out VfsMetadata upperMeta))
         {
             if (upperMeta.Kind == FsNodeKind.Directory)
                 return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is a directory: {path}"));
@@ -126,7 +126,7 @@ public sealed class OverlayFs : IVfsBackend
             return _upper.Open(path, mode, access, share);
         }
 
-        if (TryGetLowerMetadata(path, out var lowerMeta))
+        if (TryGetLowerMetadata(path, out VfsMetadata lowerMeta))
         {
             if (lowerMeta.Kind == FsNodeKind.Directory)
                 return Result<Stream, KernelError>.Failure(KernelError.Corrupted($"Path is a directory: {path}"));
@@ -136,14 +136,14 @@ public sealed class OverlayFs : IVfsBackend
 
             if (wantsWrite || createLike || truncateLike)
             {
-                var copyUp = CopyUpNode(path, lowerMeta.Kind);
+                Option<KernelError> copyUp = CopyUpNode(path, lowerMeta.Kind);
                 if (copyUp.IsSome)
                     return Result<Stream, KernelError>.Failure(copyUp.Value);
 
-                if (lowerMeta.Kind == FsNodeKind.File && _lower.TryGetMetadata(path, out var meta))
+                if (lowerMeta.Kind == FsNodeKind.File && _lower.TryGetMetadata(path, out VfsMetadata meta))
                 {
                     // preserve lower permissions on copy-up
-                    var chmod = _upper.SetPermissions(path, meta.Permissions);
+                    Option<KernelError> chmod = _upper.SetPermissions(path, meta.Permissions);
                     if (chmod.IsSome)
                         return Result<Stream, KernelError>.Failure(chmod.Value);
                 }
@@ -168,14 +168,14 @@ public sealed class OverlayFs : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot write to the overlay root."));
 
-        if (TryGetUpperMetadata(path, out var upperMeta))
+        if (TryGetUpperMetadata(path, out VfsMetadata upperMeta))
         {
             if (upperMeta.Kind == FsNodeKind.Directory)
                 return Option<KernelError>.Some(KernelError.InvalidOp($"Cannot overwrite directory with file: {path}"));
 
             if (upperMeta.Kind == FsNodeKind.SymbolicLink)
             {
-                if (!TryResolveSymlinkTarget(path, out var resolvedTarget))
+                if (!TryResolveSymlinkTarget(path, out string? resolvedTarget))
                     return Option<KernelError>.Some(KernelError.Corrupted($"Broken symlink: {path}"));
 
                 return WriteAllBytes(resolvedTarget, data);
@@ -191,20 +191,20 @@ public sealed class OverlayFs : IVfsBackend
 
             if (lowerMeta.Kind == FsNodeKind.SymbolicLink)
             {
-                if (!TryResolveSymlinkTarget(path, out var resolvedTarget))
+                if (!TryResolveSymlinkTarget(path, out string? resolvedTarget))
                     return Option<KernelError>.Some(KernelError.Corrupted($"Broken symlink: {path}"));
 
                 return WriteAllBytes(resolvedTarget, data);
             }
 
-            var copyUp = CopyUpFile(path);
+            Option<KernelError> copyUp = CopyUpFile(path);
             if (copyUp.IsSome)
                 return copyUp;
 
             return _upper.WriteAllBytes(path, data);
         }
 
-        var parentResult = EnsureWritableParentDirectory(path);
+        Option<KernelError> parentResult = EnsureWritableParentDirectory(path);
         if (parentResult.IsSome)
             return parentResult;
 
@@ -220,7 +220,7 @@ public sealed class OverlayFs : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.None();
 
-        if (TryGetUpperMetadata(path, out var upperMeta))
+        if (TryGetUpperMetadata(path, out VfsMetadata upperMeta))
         {
             if (upperMeta.Kind == FsNodeKind.File)
                 return Option<KernelError>.Some(KernelError.InvalidOp($"File already exists: {path}"));
@@ -229,16 +229,16 @@ public sealed class OverlayFs : IVfsBackend
                 return Option<KernelError>.None();
         }
 
-        if (TryGetLowerMetadata(path, out var lowerMeta) && lowerMeta.Kind == FsNodeKind.File)
+        if (TryGetLowerMetadata(path, out VfsMetadata lowerMeta) && lowerMeta.Kind == FsNodeKind.File)
             return Option<KernelError>.Some(KernelError.InvalidOp($"File already exists: {path}"));
 
-        var parentResult = EnsureWritableParentDirectory(path);
+        Option<KernelError> parentResult = EnsureWritableParentDirectory(path);
         if (parentResult.IsSome)
             return Option<KernelError>.Some(parentResult.Value);
 
         ClearWhiteoutExact(path);
 
-        var result = _upper.CreateDirectory(path, recursive: true);
+        Option<KernelError> result = _upper.CreateDirectory(path, recursive: true);
         if (result.IsSome)
             return result;
 
@@ -253,19 +253,19 @@ public sealed class OverlayFs : IVfsBackend
         if (string.IsNullOrEmpty(path))
             return Option<KernelError>.Some(KernelError.InvalidOp("Cannot create a symlink at the root."));
 
-        if (TryGetUpperMetadata(path, out var upperMeta) && upperMeta.Kind != FsNodeKind.Missing)
+        if (TryGetUpperMetadata(path, out VfsMetadata upperMeta) && upperMeta.Kind != FsNodeKind.Missing)
             return Option<KernelError>.Some(KernelError.InvalidOp($"Path already exists: {path}"));
 
-        if (TryGetLowerMetadata(path, out var lowerMeta) && lowerMeta.Kind != FsNodeKind.Missing)
+        if (TryGetLowerMetadata(path, out VfsMetadata lowerMeta) && lowerMeta.Kind != FsNodeKind.Missing)
             return Option<KernelError>.Some(KernelError.InvalidOp($"Path already exists: {path}"));
 
-        var parentResult = EnsureWritableParentDirectory(path);
+        Option<KernelError> parentResult = EnsureWritableParentDirectory(path);
         if (parentResult.IsSome)
             return parentResult;
 
         ClearWhiteoutExact(path);
 
-        var result = _upper.CreateSymbolicLink(path, target);
+        Option<KernelError> result = _upper.CreateSymbolicLink(path, target);
         if (result.IsSome)
             return result;
 
@@ -287,7 +287,7 @@ public sealed class OverlayFs : IVfsBackend
 
         if (upperExists)
         {
-            var result = _upper.Delete(path);
+            Option<KernelError> result = _upper.Delete(path);
             if (result.IsSome)
                 return result;
 
@@ -305,29 +305,29 @@ public sealed class OverlayFs : IVfsBackend
         if (IsHiddenByWhiteout(path))
             return Result<string[], KernelError>.Failure(KernelError.NotFound(path));
 
-        if (!TryGetMetadata(path, out var metadata) || metadata.Kind != FsNodeKind.Directory)
+        if (!TryGetMetadata(path, out VfsMetadata metadata) || metadata.Kind != FsNodeKind.Directory)
             return Result<string[], KernelError>.Failure(KernelError.InvalidOp($"Path is not a directory: {path}"));
 
         var result = new HashSet<string>(StringComparer.Ordinal);
 
-        if (TryGetUpperMetadata(path, out var upperMeta) && upperMeta.Kind == FsNodeKind.Directory)
+        if (TryGetUpperMetadata(path, out VfsMetadata upperMeta) && upperMeta.Kind == FsNodeKind.Directory)
         {
-            var upperList = _upper.List(path);
+            Result<string[], KernelError> upperList = _upper.List(path);
             if (upperList.IsFailure)
                 return Result<string[], KernelError>.Failure(upperList.Error);
 
-            foreach (var name in upperList.Value)
+            foreach (string name in upperList.Value)
                 result.Add(name);
         }
 
         // Add lower layer entries unless hidden or overridden by upper.
-        if (TryGetLowerMetadata(path, out var lowerMeta) && lowerMeta.Kind == FsNodeKind.Directory)
+        if (TryGetLowerMetadata(path, out VfsMetadata lowerMeta) && lowerMeta.Kind == FsNodeKind.Directory)
         {
-            var lowerList = _lower.List(path);
+            Result<string[], KernelError> lowerList = _lower.List(path);
             if (lowerList.IsFailure)
                 return Result<string[], KernelError>.Failure(lowerList.Error);
 
-            foreach (var name in lowerList.Value)
+            foreach (string name in lowerList.Value)
             {
                 string childPath = Combine(path, name);
 
@@ -341,7 +341,7 @@ public sealed class OverlayFs : IVfsBackend
             }
         }
 
-        var array = result.ToArray();
+        string[] array = [.. result];
         Array.Sort(array, StringComparer.Ordinal);
 
         return array;
@@ -353,20 +353,20 @@ public sealed class OverlayFs : IVfsBackend
 
         if (TryGetUpperMetadata(path, out _))
         {
-            var result = _upper.SetPermissions(path, permissions);
+            Option<KernelError> result = _upper.SetPermissions(path, permissions);
             if (result.IsSome)
                 return result;
 
             return Option<KernelError>.None();
         }
 
-        if (TryGetLowerMetadata(path, out var lowerMeta))
+        if (TryGetLowerMetadata(path, out VfsMetadata lowerMeta))
         {
-            var copyUp = CopyUpNode(path, lowerMeta.Kind);
+            Option<KernelError> copyUp = CopyUpNode(path, lowerMeta.Kind);
             if (copyUp.IsSome)
                 return copyUp;
 
-            var result = _upper.SetPermissions(path, permissions);
+            Option<KernelError> result = _upper.SetPermissions(path, permissions);
             if (result.IsSome)
                 return result;
 
@@ -384,7 +384,7 @@ public sealed class OverlayFs : IVfsBackend
         if (IsHiddenByWhiteout(path))
             return false;
 
-        if (TryGetUpperMetadata(path, out var upperMeta))
+        if (TryGetUpperMetadata(path, out VfsMetadata upperMeta))
         {
             if (upperMeta.Kind == FsNodeKind.File)
             {
@@ -395,7 +395,7 @@ public sealed class OverlayFs : IVfsBackend
 
             if (upperMeta.Kind == FsNodeKind.SymbolicLink)
             {
-                if (!TryResolveSymlinkTarget(path, out var resolvedTarget))
+                if (!TryResolveSymlinkTarget(path, out string? resolvedTarget))
                     return false;
 
                 return TryResolveEffectiveFile(resolvedTarget, out backend, out relativePath);
@@ -404,7 +404,7 @@ public sealed class OverlayFs : IVfsBackend
             return false;
         }
 
-        if (TryGetLowerMetadata(path, out var lowerMeta))
+        if (TryGetLowerMetadata(path, out VfsMetadata lowerMeta))
         {
             if (lowerMeta.Kind == FsNodeKind.File)
             {
@@ -415,7 +415,7 @@ public sealed class OverlayFs : IVfsBackend
 
             if (lowerMeta.Kind == FsNodeKind.SymbolicLink)
             {
-                if (!TryResolveSymlinkTarget(path, out var resolvedTarget))
+                if (!TryResolveSymlinkTarget(path, out string? resolvedTarget))
                     return false;
 
                 return TryResolveEffectiveFile(resolvedTarget, out backend, out relativePath);
@@ -432,18 +432,18 @@ public sealed class OverlayFs : IVfsBackend
         if (IsHiddenByWhiteout(path))
             return false;
 
-        if (TryGetUpperMetadata(path, out var upperMeta) && upperMeta.Kind == FsNodeKind.SymbolicLink)
+        if (TryGetUpperMetadata(path, out VfsMetadata upperMeta) && upperMeta.Kind == FsNodeKind.SymbolicLink)
         {
-            if (!_upper.TryReadLink(path, out var target))
+            if (!_upper.TryReadLink(path, out string? target))
                 return false;
 
             resolvedTarget = target;
             return true;
         }
 
-        if (TryGetLowerMetadata(path, out var lowerMeta) && lowerMeta.Kind == FsNodeKind.SymbolicLink)
+        if (TryGetLowerMetadata(path, out VfsMetadata lowerMeta) && lowerMeta.Kind == FsNodeKind.SymbolicLink)
         {
-            if (!_lower.TryReadLink(path, out var target))
+            if (!_lower.TryReadLink(path, out string? target))
                 return false;
 
             resolvedTarget = target;
@@ -457,13 +457,13 @@ public sealed class OverlayFs : IVfsBackend
     {
         path = Normalize(path);
 
-        if (!TryGetLowerMetadata(path, out var lowerMeta))
+        if (!TryGetLowerMetadata(path, out VfsMetadata lowerMeta))
             return Option<KernelError>.Some(KernelError.NotFound(path));
 
         if (lowerMeta.Kind == FsNodeKind.Directory)
             return Option<KernelError>.Some(KernelError.InvalidOp($"Cannot copy up directory as file: {path}"));
 
-        var parentResult = EnsureWritableParentDirectory(path);
+        Option<KernelError> parentResult = EnsureWritableParentDirectory(path);
         if (parentResult.IsSome)
             return parentResult;
 
@@ -471,21 +471,21 @@ public sealed class OverlayFs : IVfsBackend
 
         if (lowerMeta.Kind == FsNodeKind.SymbolicLink)
         {
-            if (!_lower.TryReadLink(path, out var target))
+            if (!_lower.TryReadLink(path, out string? target))
                 return Option<KernelError>.Some(KernelError.Corrupted($"Broken symlink: {path}"));
 
-            var createLink = _upper.CreateSymbolicLink(path, target);
+            Option<KernelError> createLink = _upper.CreateSymbolicLink(path, target);
             if (createLink.IsSome)
                 return createLink;
 
             return Option<KernelError>.None();
         }
 
-        var bytes = _lower.ReadAllBytes(path);
+        Result<byte[], KernelError> bytes = _lower.ReadAllBytes(path);
         if (bytes.IsFailure)
             return Option<KernelError>.Some(bytes.Error);
 
-        var write = _upper.WriteAllBytes(path, bytes.Value);
+        Option<KernelError> write = _upper.WriteAllBytes(path, bytes.Value);
         if (write.IsSome)
             return write;
 
@@ -501,14 +501,14 @@ public sealed class OverlayFs : IVfsBackend
 
         if (kind == FsNodeKind.Directory)
         {
-            var parent = FsPath.GetParent(path);
-            var ensure = EnsureWritableParentDirectory(parent);
+            string parent = FsPath.GetParent(path);
+            Option<KernelError> ensure = EnsureWritableParentDirectory(parent);
             if (ensure.IsSome)
                 return ensure;
 
             ClearWhiteoutExact(path);
 
-            var create = _upper.CreateDirectory(path, recursive: true);
+            Option<KernelError> create = _upper.CreateDirectory(path, recursive: true);
             if (create.IsSome)
                 return create;
 
@@ -517,17 +517,17 @@ public sealed class OverlayFs : IVfsBackend
 
         if (kind == FsNodeKind.SymbolicLink)
         {
-            if (!_lower.TryReadLink(path, out var target))
+            if (!_lower.TryReadLink(path, out string? target))
                 return Option<KernelError>.Some(KernelError.Corrupted($"Broken symlink: {path}"));
 
-            var parent = FsPath.GetParent(path);
-            var ensure = EnsureWritableParentDirectory(parent);
+            string parent = FsPath.GetParent(path);
+            Option<KernelError> ensure = EnsureWritableParentDirectory(parent);
             if (ensure.IsSome)
                 return ensure;
 
             ClearWhiteoutExact(path);
 
-            var createLink = _upper.CreateSymbolicLink(path, target);
+            Option<KernelError> createLink = _upper.CreateSymbolicLink(path, target);
             if (createLink.IsSome)
                 return createLink;
 
@@ -547,7 +547,7 @@ public sealed class OverlayFs : IVfsBackend
 
         ClearWhiteoutsAlongPath(parent);
 
-        var create = _upper.CreateDirectory(parent, recursive: true);
+        Option<KernelError> create = _upper.CreateDirectory(parent, recursive: true);
         if (create.IsSome)
             return create;
 
@@ -591,7 +591,7 @@ public sealed class OverlayFs : IVfsBackend
             return true;
 
         string current = string.Empty;
-        foreach (var segment in FsPath.SplitRelative(path))
+        foreach (string segment in FsPath.SplitRelative(path))
         {
             current = string.IsNullOrEmpty(current) ? segment : current + "/" + segment;
 
@@ -618,7 +618,7 @@ public sealed class OverlayFs : IVfsBackend
 
         string current = string.Empty;
 
-        foreach (var segment in FsPath.SplitRelative(path))
+        foreach (string segment in FsPath.SplitRelative(path))
         {
             current = string.IsNullOrEmpty(current) ? segment : current + "/" + segment;
 

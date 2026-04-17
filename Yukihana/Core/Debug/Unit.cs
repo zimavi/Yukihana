@@ -51,5 +51,5 @@ public sealed class Unit : IDisposable
     private static string Past(string verb) => verb + "ed";
 
     public void Dispose()
-    {}
+    { }
 }

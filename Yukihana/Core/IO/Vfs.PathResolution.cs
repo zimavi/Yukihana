@@ -22,28 +22,28 @@ public static partial class VFS
     {
         string absolute = ToAbsolute(path);
 
-        for(int hop = 0; hop < 32; hop++)
+        for (int hop = 0; hop < 32; hop++)
         {
-            var mount = FindBestMount(absolute);
+            MountInfo? mount = FindBestMount(absolute);
             if (mount is null)
                 return Result<ResolvedPath, KernelError>.Failure(KernelError.NotFound(absolute));
-            
+
             string relative = GetRelativePath(absolute, mount.MountPoint);
             string[] segments = FsPath.SplitRelative(relative);
 
             if (segments.Length == 0)
             {
-                if (!mount.Backend.TryGetMetadata(string.Empty, out var rootMeta))
+                if (!mount.Backend.TryGetMetadata(string.Empty, out VfsMetadata rootMeta))
                     rootMeta = new VfsMetadata(
-                        FsNodeKind.Directory, 
-                        FsPermissionUtil.DefaultDirectory, 
-                        CurrentCredentials.UserId, 
+                        FsNodeKind.Directory,
+                        FsPermissionUtil.DefaultDirectory,
+                        CurrentCredentials.UserId,
                         CurrentCredentials.GroupId,
                         0);
-                
+
                 if (rootMeta.Kind == FsNodeKind.SymbolicLink && followFinalSymlink)
                 {
-                    if (!mount.Backend.TryReadLink(string.Empty, out var target))
+                    if (!mount.Backend.TryReadLink(string.Empty, out string? target))
                         return Result<ResolvedPath, KernelError>.Failure(KernelError.Corrupted($"Broken link: {absolute}"));
 
                     absolute = ExpandSymbolicLinkTarget(mount.MountPoint, target, string.Empty);
@@ -62,11 +62,11 @@ public static partial class VFS
 
             string currentRel = string.Empty;
 
-            for(int i = 0; i < segments.Length; i++)
+            for (int i = 0; i < segments.Length; i++)
             {
                 currentRel = string.IsNullOrEmpty(currentRel) ? segments[i] : currentRel + "/" + segments[i];
 
-                if (!mount.Backend.TryGetMetadata(currentRel, out var meta))
+                if (!mount.Backend.TryGetMetadata(currentRel, out VfsMetadata meta))
                 {
                     return new ResolvedPath
                     {
@@ -92,14 +92,14 @@ public static partial class VFS
                         };
                     }
 
-                    if (!mount.Backend.TryReadLink(currentRel, out var target))
+                    if (!mount.Backend.TryReadLink(currentRel, out string? target))
                         return Result<ResolvedPath, KernelError>.Failure(KernelError.Corrupted($"Broken link: {absolute}"));
-                    
+
                     string remainder = JoinSegments(segments, i + 1);
                     absolute = ExpandSymbolicLinkTarget(FsPath.CombineAbsolute(mount.MountPoint, currentRel), target, remainder);
                     goto nextHop;
                 }
-                
+
                 if (meta.Kind == FsNodeKind.Directory && i < segments.Length - 1)
                 {
                     if (!FsPermissionUtil.CanRead(meta.Permissions, CurrentCredentials, meta.UserId, meta.GroupId))
@@ -138,7 +138,7 @@ public static partial class VFS
         MountInfo? best = null;
         int bestLength = -1;
 
-        foreach (var mount in s_mounts)
+        foreach (MountInfo mount in s_mounts)
         {
             if (!IsUnderMount(absolutePath, mount.MountPoint))
                 continue;

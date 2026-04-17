@@ -58,10 +58,10 @@ public sealed class InitRamFs : IVfsBackend
         {
             if (position < 0 || position >= _data.LongLength)
                 throw new ArgumentOutOfRangeException(nameof(position));
-            
+
             if (buffer.Length == 0 || position == _data.LongLength)
                 return 0;
-            
+
             int remaining = (int)Math.Min(_data.LongLength - position, int.MaxValue);
             int toCopy = Math.Min(remaining, buffer.Length);
 
@@ -71,7 +71,7 @@ public sealed class InitRamFs : IVfsBackend
 
         public void Write(long position, ReadOnlySpan<byte> buffer) =>
             throw new InvalidOperationException("Read-only filesystem.");
-        
+
         public void SetLength(long length) =>
             throw new InvalidOperationException("Read-only filesystem.");
 
@@ -85,7 +85,7 @@ public sealed class InitRamFs : IVfsBackend
         ArgumentNullException.ThrowIfNull(compressedArchive);
 
         byte[] archiveBytes = Decompress(compressedArchive);
-        
+
         BuildFilesystemFromArchive(archiveBytes);
 
         ComputeSubtreeSizes(_root);
@@ -95,8 +95,8 @@ public sealed class InitRamFs : IVfsBackend
     {
         if (data.Length < 2)
             throw new ArgumentException("Archive data is too short.");
-        
-        var compressor = ArchiveCompressorFactory.Detect(data);
+
+        Option<IArchiveCompressor> compressor = ArchiveCompressorFactory.Detect(data);
 
         if (compressor.IsSome)
             return compressor.Value.Decompress(data);
@@ -106,13 +106,13 @@ public sealed class InitRamFs : IVfsBackend
 
     private void BuildFilesystemFromArchive(byte[] archiveBytes)
     {
-        var archivator = ArchivatorFactory.Detect(archiveBytes);
+        Option<IArchivator> archivator = ArchivatorFactory.Detect(archiveBytes);
 
-        var archive = archivator.OrThrow("Unsupported initramfs format.").Read(archiveBytes);
+        ArchiveImage archive = archivator.OrThrow("Unsupported initramfs format.").Read(archiveBytes);
 
         var createdNodes = new Dictionary<string, Inode>();
 
-        foreach(var entry in archive.Entries)
+        foreach (ArchiveEntry entry in archive.Entries)
         {
             string fullPath = NormalizePath(entry.Path);
 
@@ -154,16 +154,16 @@ public sealed class InitRamFs : IVfsBackend
                 case ArchiveEntryKind.HardLink:
                 {
                     if (entry.LinkTarget == null)
-                    continue;
+                        continue;
 
                     string targetPath = NormalizePath(entry.LinkTarget);
 
-                    if (!createdNodes.TryGetValue(targetPath, out var targetInode))
+                    if (!createdNodes.TryGetValue(targetPath, out Inode? targetInode))
                     {
                         // fallback: create empty file (should not normally happen)
                         targetInode = new Inode(FsNodeKind.File)
                         {
-                            Data = Array.Empty<byte>()
+                            Data = []
                         };
                     }
 
@@ -194,22 +194,22 @@ public sealed class InitRamFs : IVfsBackend
 
     private void AddNode(string path, Inode node)
     {
-        var parent = TraverseToParent(path, createMissing: true);
+        Inode parent = TraverseToParent(path, createMissing: true);
         string name = FsPath.GetFileName(path);
         parent.Children?[name] = node;
     }
 
     private Inode TraverseToParent(string path, bool createMissing)
     {
-        var current = _root;
-        var segments = FsPath.SplitRelative(FsPath.GetParent(path));
+        Inode current = _root;
+        string[] segments = FsPath.SplitRelative(FsPath.GetParent(path));
 
-        foreach (var segment in segments)
+        foreach (string segment in segments)
         {
             // TODO: Improve children persistence checking
             EnsureDirectory(current, segment);
 
-            if(!current.Children!.TryGetValue(segment, out var next))
+            if (!current.Children!.TryGetValue(segment, out var next))
             {
                 if (createMissing)
                 {
@@ -243,7 +243,7 @@ public sealed class InitRamFs : IVfsBackend
 
         while (stack.Count > 0)
         {
-            var (node, visited) = stack.Pop();
+            (Inode? node, bool visited) = stack.Pop();
 
             if (!visited)
             {
@@ -252,7 +252,7 @@ public sealed class InitRamFs : IVfsBackend
 
                 if (node.Kind == FsNodeKind.Directory && node.Children != null)
                 {
-                    foreach (var child in node.Children.Values)
+                    foreach (Inode child in node.Children.Values)
                         stack.Push((child, false));
                 }
             }
@@ -266,7 +266,7 @@ public sealed class InitRamFs : IVfsBackend
                     {
                         if (node.Children != null)
                         {
-                            foreach (var child in node.Children.Values)
+                            foreach (Inode child in node.Children.Values)
                                 total += child.SubtreeSize;
                         }
                         break;
@@ -291,11 +291,11 @@ public sealed class InitRamFs : IVfsBackend
     private static void EnsureDirectory(Inode node, string segment)
     {
         if (node.Kind != FsNodeKind.Directory || node.Children is null)
-                throw new InvalidOperationException($"{segment} is not a directory");
+            throw new InvalidOperationException($"{segment} is not a directory");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public KernelError ReturnReadOnly() => KernelError.InvalidOp("Read-only filesystem.");
+    public static KernelError ReturnReadOnly() => KernelError.InvalidOp("Read-only filesystem.");
 
     #region Interface Implementation
 
@@ -304,7 +304,7 @@ public sealed class InitRamFs : IVfsBackend
 
     public bool TryReadLink(string path, out string target)
     {
-        var node = FindNode(path);
+        Inode? node = FindNode(path);
         if (node?.Kind == FsNodeKind.SymbolicLink)
         {
             target = node.LinkTarget!;
@@ -316,7 +316,7 @@ public sealed class InitRamFs : IVfsBackend
 
     public bool TryGetMetadata(string path, out VfsMetadata metadata)
     {
-        var node = FindNode(path);
+        Inode? node = FindNode(path);
         if (node is null)
         {
             metadata = default;
@@ -331,15 +331,15 @@ public sealed class InitRamFs : IVfsBackend
         ulong usedBytes = (ulong)_root.SubtreeSize;
         return new(usedBytes, usedBytes);
     }
-    
+
     public Option<KernelError> ResizeSpace(ulong totalBytes) => ReturnReadOnly();
 
     public Result<byte[], KernelError> ReadAllBytes(string path)
     {
-        var node = FindNode(path);
+        Inode? node = FindNode(path);
         if (node is null) return Result<byte[], KernelError>.Failure(KernelError.NotFound(path));
         if (node.Kind != FsNodeKind.File) return Result<byte[], KernelError>.Failure(KernelError.InvalidOp($"Not a file: {path}"));
-        return node.Data ?? Array.Empty<byte>();
+        return node.Data ?? [];
     }
 
     public Result<string, KernelError> ReadAllText(string path, Encoding? encoding = null)
@@ -350,8 +350,8 @@ public sealed class InitRamFs : IVfsBackend
 
     private Inode? FindNode(string path)
     {
-        var current = _root;
-        foreach (var seg in FsPath.SplitRelative(path))
+        Inode? current = _root;
+        foreach (string seg in FsPath.SplitRelative(path))
         {
             // TODO: Improve children persistence checking
             EnsureDirectory(current, seg);
@@ -371,15 +371,15 @@ public sealed class InitRamFs : IVfsBackend
 
     public Result<string[], KernelError> List(string path)
     {
-        var node = FindNode(path);
+        Inode? node = FindNode(path);
 
-        if (node is null) 
+        if (node is null)
             return Result<string[], KernelError>.Failure(KernelError.NotFound(path));
-        if (node.Kind != FsNodeKind.Directory) 
+        if (node.Kind != FsNodeKind.Directory)
             return Result<string[], KernelError>.Failure(KernelError.InvalidOp($"Not a directory: {path}"));
 
         // TODO: Improve children persistence checking
-        var items = node.Children?.Keys.ToArray() ?? [];
+        string[] items = node.Children?.Keys.ToArray() ?? [];
         Array.Sort(items, StringComparer.Ordinal);
         return items;
     }
@@ -388,34 +388,34 @@ public sealed class InitRamFs : IVfsBackend
     {
         path = FsPath.NormalizeRelative(path);
 
-        if(string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(path))
             return FsNodeKind.Directory;
-        
-        var node = FindNode(path);
+
+        Inode? node = FindNode(path);
         return node?.Kind ?? FsNodeKind.Missing;
     }
 
     public Result<Stream, KernelError> Open(
-        string path, 
-        FileMode mode = FileMode.Open, 
-        FileAccess access = FileAccess.Read, 
+        string path,
+        FileMode mode = FileMode.Open,
+        FileAccess access = FileAccess.Read,
         FileShare share = FileShare.Read)
     {
         path = FsPath.NormalizeRelative(path);
 
         if (mode != FileMode.Open)
             return Result<Stream, KernelError>.Failure(ReturnReadOnly());
-        
+
         if ((access & FileAccess.Write) != 0)
             return Result<Stream, KernelError>.Failure(ReturnReadOnly());
-        
-        var node = FindNode(path);
+
+        Inode? node = FindNode(path);
         if (node is null)
             return Result<Stream, KernelError>.Failure(KernelError.NotFound(path));
 
         if (node.Kind != FsNodeKind.File)
             return Result<Stream, KernelError>.Failure(KernelError.InvalidOp($"Not a regular file: {path}"));
-        
+
         byte[] data = node.Data ?? [];
         Stream stream = new RamFsStream(new ReadOnlyNodeBacking(data), access, share);
         return stream;

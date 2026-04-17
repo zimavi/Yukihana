@@ -47,7 +47,7 @@ public sealed class OptionalResourceGroup<TState>
 
         logger.Info($"To stage: {_members.Count}");
 
-        foreach(var member in _members)
+        foreach (OptionalResourceMember<TState> member in _members)
         {
             logger.Info($"Loading \"{member.Description}\" for group \"{_name}\"");
 
@@ -68,10 +68,10 @@ public sealed class OptionalResourceGroup<TState>
         logger.Info("All members have been staged. Applying them to state");
 
         int i = 0;
-        foreach(var (Member, Data) in staged)
+        foreach ((OptionalResourceMember<TState> Member, byte[]? Data) in staged)
         {
             logger.Info($"Apply for \"{Member.Description}\"");
-            
+
             Member.Apply(state, Data);
             i++;
         }
@@ -80,7 +80,7 @@ public sealed class OptionalResourceGroup<TState>
         _commit(state);
 
         logger.Info($"Optional asset group \"{_name}\" loaded successfully");
-        
+
         return state;
     }
 }

@@ -17,7 +17,7 @@ public sealed class Logger(string source)
         [CallerFilePath] string f = "",
         [CallerLineNumber] int l = 0) =>
         KernelLog.Write(LogLevel.Info, _source, msg, m, f, l);
-    
+
     public void Warn(string msg,
         [CallerMemberName] string m = "",
         [CallerFilePath] string f = "",

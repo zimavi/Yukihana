@@ -26,7 +26,7 @@ public sealed class DevFs : IVfsBackend
 
     public Result<byte[], KernelError> ReadAllBytes(string path)
     {
-        var streamResult = Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        Result<Stream, KernelError> streamResult = Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         if (streamResult.IsFailure)
             return Result<byte[], KernelError>.Failure(streamResult.Error);
 
@@ -50,11 +50,11 @@ public sealed class DevFs : IVfsBackend
 
     public Option<KernelError> WriteAllBytes(string path, byte[] data)
     {
-        using var result = Open(path, FileMode.Open, FileAccess.Write, FileShare.Read);
+        using Result<Stream, KernelError> result = Open(path, FileMode.Open, FileAccess.Write, FileShare.Read);
         if (result.IsFailure)
             return result.Error;
-        
-        var stream = result.Value;
+
+        Stream stream = result.Value;
         stream.Write(data);
         stream.Flush();
 
