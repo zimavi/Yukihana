@@ -5,8 +5,12 @@
     "machineType": "q35",
     "cpuModel": "max",
     "serialMode": "stdio",
+    "networkCard": "none",
+    "keyboard": "ps2",
+    "mouse": "ps2",
     "enableNetwork": false,
     "networkPorts": "5555",
-    "extraArgs": ""
+    "extraArgs": "",
+    "disks": []
   }
 }
