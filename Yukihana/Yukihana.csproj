@@ -1,9 +1,10 @@
-<Project Sdk="Cosmos.Sdk/3.0.49">
+<Project Sdk="Cosmos.Sdk/3.0.66">
   <PropertyGroup>
 
     <CosmosKernelClass>Yukihana.Kernel</CosmosKernelClass>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <CosmosEnableStorage>true</CosmosEnableStorage>
 
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>NAOT0007</WarningsNotAsErrors>
@@ -17,7 +18,7 @@
     <Hour>$([System.DateTime]::UtcNow.ToString("HH"))</Hour>
     <Minute>$([System.DateTime]::UtcNow.ToString("mm"))</Minute>
 
-    <CosmosVersion>3, 0, 49</CosmosVersion>
+    <CosmosVersion>3, 0, 66</CosmosVersion>
     <YukihanaVersion>2, 0, 14</YukihanaVersion>
 
     <YukihanaVersionInfo>
@@ -49,11 +50,11 @@ public static class VersionInfo
     <WriteLinesToFile File="Core/VersionInfo.cs" Lines="$(YukihanaVersionInfo)" Overwrite="true" />
   </Target>
 
-  
+
   <!-- Core kernel packages -->
   <ItemGroup>
-    <PackageReference Include="Cosmos.Kernel" Version="3.0.49" />
-    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.49" />
+    <PackageReference Include="Cosmos.Kernel" Version="3.0.66" />
+    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.66" />
   </ItemGroup>
 
   <ItemGroup>
