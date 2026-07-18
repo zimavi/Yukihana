@@ -5,6 +5,7 @@ using Cosmos.Kernel.HAL.Vfs;
 using Cosmos.Kernel.System.Filesystems.Fat;
 using Cosmos.Kernel.System.Vfs;
 using Yukihana.Core.Debug;
+using Yukihana.Core.IO.Vfs.Config;
 
 namespace Yukihana.Core.IO.Vfs;
 
@@ -15,11 +16,12 @@ internal static class VfsInit
         { "fat", new FatFilesystemType() },
     };
 
-    public static void InitVfs(Logger logger)
+    public static void InitVfs(Logger logger, VfsConfigManager vfsMan)
     {
         foreach ((string name, IVfsFilesystemType type) in s_filesystemTypes)
         {
             logger.Info($"Registering fs type '{name}'");
+            vfsMan.RegisterFilesystem(name, type);
             if (!VfsManager.RegisterFilesystem(name, type))
                 logger.Error("Unable to register filesystem!");
             else

@@ -7,5 +7,5 @@ namespace Yukihana.Core.IO.Vfs.Probe;
 
 public interface IFilesystemProbe
 {
-    static bool TryProbe(Partition device, out FilesystemProbeResult result) => throw new NotImplementedException();
+    bool TryProbe(Partition device, out FilesystemProbeResult result);
 }

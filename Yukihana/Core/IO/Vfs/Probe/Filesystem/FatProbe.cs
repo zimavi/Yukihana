@@ -19,7 +19,7 @@ public sealed class FatProbe : IFilesystemProbe
     private const int Fat32Serial = 0x43;
     private const int Fat32Label = 0x47;
 
-    public static bool TryProbe(Partition part, out FilesystemProbeResult result)
+    public bool TryProbe(Partition part, out FilesystemProbeResult result)
     {
         result = default;
 

@@ -3,7 +3,9 @@
 
 using System.Data;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Cosmos.Kernel.HAL.Vfs;
+using Cosmos.Kernel.System.Filesystems.Fat;
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Cosmos.Kernel.System.Storage;
@@ -16,6 +18,7 @@ using Yukihana.Core.Extensions.System;
 using Yukihana.Core.IO.Loaders;
 using Yukihana.Core.IO.Loaders.Optional;
 using Yukihana.Core.IO.Vfs;
+using Yukihana.Core.IO.Vfs.Config;
 using Yukihana.Core.IO.Vfs.Device;
 using Yukihana.Core.IO.Vfs.Filesystem.InitFs;
 using Yukihana.Core.IO.Vfs.Probe;
@@ -40,6 +43,7 @@ public class Kernel : Sys.Kernel
     private static string _ramfs_resource_key => string.Join('.', RAMFS_PATH, RAMFS_FILE);
 
     private static readonly Logger s_kernelLogger;
+    private static readonly VfsConfigManager s_vfsMan;
 
     static Kernel()
     {
@@ -48,6 +52,8 @@ public class Kernel : Sys.Kernel
         s_kernelLogger = new();
         s_kernelLogger.Info("Static Kernel constructor called");
         s_kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
+        
+        s_vfsMan = new();
     }
 
     protected override void BeforeRun()
@@ -71,7 +77,7 @@ public class Kernel : Sys.Kernel
 
         var logger = new Logger("init");
 
-        VfsInit.InitVfs(logger);
+        VfsInit.InitVfs(logger, s_vfsMan);
 
         logger.Info($"Fetching \"{RAMFS_FILE}\".");
         byte[]? ramfsBytes = null;
@@ -91,10 +97,6 @@ public class Kernel : Sys.Kernel
                 logger.Warn("No initramfs archive provided, perhaps it's missing?");
         }
 
-        logger.Info("Loading initramfs.");
-
-        logger.Info("Trying to mount root partition");
-
         logger.Info($"Discovered {StorageManager.Partitions.Count} partitions");
 
         ArchiveImage? ramfsImage = null;
@@ -103,7 +105,7 @@ public class Kernel : Sys.Kernel
 
         if (ramfsImage is not null)
         {
-            MemoryBlockDevice ramfsDisk = new("RAMFSDISK", 512, 65536);
+            MemoryBlockDevice ramfsDisk = new("INITFSDISK", 512, 65536);
             InitfsFilesystemType initfsType = new(ramfsDisk, ramfsImage);
 
             if (VfsManager.RegisterFilesystem("initfs", initfsType))
@@ -117,14 +119,6 @@ public class Kernel : Sys.Kernel
                 logger.Info("Mounted initfs as '/'");
             else
                 KernelPanic.Panic("Failed to mount initfs as '/'");
-        }
-
-        logger.Info("Dumping VFS mounts");
-        var mounts = VfsManager.Mounts;
-
-        foreach (var mount in mounts)
-        {
-            logger.Info($"   -> Type='{mount.FilesystemType.GetType().Name}', Mount='{mount.MountPoint}', Name='{mount.Name}'");
         }
 
         var fontGroup = new OptionalResourceGroup<FontState>(
@@ -149,35 +143,35 @@ public class Kernel : Sys.Kernel
             none: () => { }
         );
 
-        // // Mount ram backed FAT as tmp
-        // MemoryBlockDevice ramDisk = new("RAMDISK", 512, 65536);
-        // FatFilesystemType ramFat = new(ramDisk);
-        // 
-        // VfsInit.s_filesystemTypes["fat"].TryFormat(default, new FatFormatOptions { Type = FatType.Fat16 });
-        // 
-        // VfsManager.RegisterFilesystem("ramfat", ramFat);
-        // VfsManager.TryMount("ramfat", "", MountFlags.None, "/tmp", out _);
-
-        logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}.");
-
-        // check if probing works
-        logger.Info("Probig primary partition for fat");
-
-        if (FatProbe.TryProbe(StorageManager.Partitions[0], out FilesystemProbeResult probeResult))
+        logger.Info("Reading fstab");
+        if (File.Exists("/etc/fstab"))
         {
-            logger.Info("Probing successfull");
-            logger.Info($"FS type is -> {probeResult.Filesystem}");
-            logger.Info($"FS UUID -> {probeResult.Uuid}");
-            logger.Info($"FS Label -> {probeResult.Label}");
+            string content = File.ReadAllText("/etc/fstab");
+            s_vfsMan.LoadConfig(content);
+
+            logger.Info("Unmounting initfs");
+            if (!VfsManager.TryUnmount("/"))
+                logger.Error("Failed to unmount initfs");
+            else
+                logger.Info("Unmounted initfs");
+
+            s_vfsMan.TryMountAll(out _);
         }
         else
-            logger.Info("Probing failed");
+            logger.Error("Unable to locate fstab! No filesystem will be mounted");
 
-        logger.Info("Unmouting initfs");
-        if (VfsManager.TryUnmount("/"))
-            logger.Info("Unmounted initfs");
-        else
-            logger.Error("Failed to unmount initfs");
+        logger.Warn("Mounting /tmp as FAT 16, bypassing fstab");
+
+        // Mount ram backed FAT as tmp
+        MemoryBlockDevice ramDisk = new("RAMDISK", 512, 65536);
+        FatFilesystemType ramFat = new(ramDisk);
+        
+        VfsInit.s_filesystemTypes["fat"].TryFormat(default, new FatFormatOptions { Type = FatType.Fat16 });
+        
+        VfsManager.RegisterFilesystem("ramfat", ramFat);
+        VfsManager.TryMount("ramfat", "", MountFlags.None, "/tmp", out _);
+
+        logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}.");
 
         throw new Exception("Returned from init");
     }
