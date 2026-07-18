@@ -1,5 +1,6 @@
-<Project Sdk="Cosmos.Sdk/3.0.66">
+<Project Sdk="Cosmos.Sdk/3.0.68">
   <PropertyGroup>
+    
 
     <CosmosKernelClass>Yukihana.Kernel</CosmosKernelClass>
     <OutputType>Exe</OutputType>
@@ -18,7 +19,7 @@
     <Hour>$([System.DateTime]::UtcNow.ToString("HH"))</Hour>
     <Minute>$([System.DateTime]::UtcNow.ToString("mm"))</Minute>
 
-    <CosmosVersion>3, 0, 66</CosmosVersion>
+    <CosmosVersion>3, 0, 68</CosmosVersion>
     <YukihanaVersion>2, 0, 14</YukihanaVersion>
 
     <YukihanaVersionInfo>
@@ -53,8 +54,8 @@ public static class VersionInfo
 
   <!-- Core kernel packages -->
   <ItemGroup>
-    <PackageReference Include="Cosmos.Kernel" Version="3.0.66" />
-    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.66" />
+    <PackageReference Include="Cosmos.Kernel" Version="3.0.68" />
+    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.68" />
   </ItemGroup>
 
   <ItemGroup>

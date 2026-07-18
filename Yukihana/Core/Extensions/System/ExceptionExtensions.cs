@@ -105,10 +105,15 @@ public static partial class ExceptionExtensions
 
         Serial.WriteString("Reading stack trace\n");
 
+        sb.Append("\nStack trace:");
+
         if (!string.IsNullOrEmpty(ex.StackTrace))
         {
             sb.Append('\n');
-            sb.Append(ex.StackTrace);
+            sb.Append("   " + ex.StackTrace);
+        } else
+        {
+            sb.Append("   --- NO STACK TRACE AVAILABLE ---");
         }
 
         if (ex.InnerException != null)

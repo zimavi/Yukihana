@@ -1,18 +1,27 @@
-// Yukihana OS 2026 Yukihana OS Contributors
+ // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
+using System.Data;
 using System.Reflection;
+using Cosmos.Kernel.HAL.Vfs;
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
+using Cosmos.Kernel.System.Storage;
+using Cosmos.Kernel.System.Vfs;
+using Yukihana.Core.Compression;
+using Yukihana.Core.Compression.Archives;
 using Yukihana.Core.Debug;
 using Yukihana.Core.Extensions.Primitives;
 using Yukihana.Core.Extensions.System;
-using Yukihana.Core.IO;
 using Yukihana.Core.IO.Loaders;
 using Yukihana.Core.IO.Loaders.Optional;
-using Yukihana.Core.IO.Vfs.Backends;
+using Yukihana.Core.IO.Vfs;
+using Yukihana.Core.IO.Vfs.Device;
+using Yukihana.Core.IO.Vfs.Filesystem.InitFs;
+using Yukihana.Core.IO.Vfs.Probe;
+using Yukihana.Core.IO.Vfs.Probe.Filesystem;
 using Yukihana.Core.Primitives;
-using Yukihana.Core.Resources;
+using Yukihana.Core.Resources; 
 using Yukihana.Core.Security;
 using Sys = Cosmos.Kernel.System;
 
@@ -48,9 +57,9 @@ public class Kernel : Sys.Kernel
             KernelLog.LogToScreen = true;
             Init();
         }
-        catch
+        catch (Exception ex)
         {
-            KernelPanic.Panic("Unhandled exception during boot");
+            ex.Panic("Unhandles exception during boot");
         }
     }
 
@@ -62,24 +71,61 @@ public class Kernel : Sys.Kernel
 
         var logger = new Logger("init");
 
+        VfsInit.InitVfs(logger);
+
         logger.Info($"Fetching \"{RAMFS_FILE}\".");
-        byte[] ramfsBytes;
+        byte[]? ramfsBytes = null;
 
         var assembly = Assembly.GetExecutingAssembly();
 
         using (var result = assembly.GetManifestResourceStream(_ramfs_resource_key).ToOption())
         using (var memStream = new MemoryStream())
         {
-            Stream stream = result.OrPanic($"Unable to locate \"{RAMFS_FILE}\".");
-            stream.CopyTo(memStream);
-            ramfsBytes = memStream.ToArray();
+            if (result.IsSome)
+            {
+                Stream stream = result.Value;
+                stream.CopyTo(memStream);
+                ramfsBytes = memStream.ToArray();
+            }
+            else
+                logger.Warn("No initramfs archive provided, perhaps it's missing?");
         }
 
         logger.Info("Loading initramfs.");
-        var initramfs = new InitRamFs(ramfsBytes);
 
-        logger.Info("Mounting initramfs as root.");
-        VFS.Mount("/", initramfs);
+        logger.Info("Trying to mount root partition");
+
+        logger.Info($"Discovered {StorageManager.Partitions.Count} partitions");
+
+        ArchiveImage? ramfsImage = null;
+        if (ramfsBytes is not null)
+            ramfsImage = LoadInitRamFs(ramfsBytes, logger); // This throws if cannot read
+        
+        if (ramfsImage is not null)
+        {
+            MemoryBlockDevice ramfsDisk = new("RAMFSDISK", 512, 65536);
+            InitfsFilesystemType initfsType = new(ramfsDisk, ramfsImage);
+
+            if (VfsManager.RegisterFilesystem("initfs", initfsType))
+                logger.Info("Registered initfs");
+            else
+                KernelPanic.Panic("Failed to register initfs");
+
+            logger.Info("Trying to mount initfs as root");
+
+            if (VfsManager.TryMount("initfs", "", MountFlags.ReadOnly, "/", out _))
+                logger.Info("Mounted initfs as '/'");
+            else
+                KernelPanic.Panic("Failed to mount initfs as '/'");
+        }
+
+        logger.Info("Dumping VFS mounts");
+        var mounts = VfsManager.Mounts;
+
+        foreach(var mount in mounts)
+        {
+            logger.Info($"   -> Type='{mount.FilesystemType.GetType().Name}', Mount='{mount.MountPoint}', Name='{mount.Name}'");
+        }
 
         var fontGroup = new OptionalResourceGroup<FontState>(
             name: "Fonts",
@@ -103,58 +149,37 @@ public class Kernel : Sys.Kernel
             none: () => { }
         );
 
-        logger.Info("Mounting partitions.");
-
-        VFS.Mount("/tmp", new TempFs());
-        VFS.Mount("/var", new TempFs());
-
-        VFS.Mount("/root", new TempFs());
-        VFS.Mount("/home", new TempFs());
-
-        VFS.Mount("/dev", new DevFs());
-        VFS.Mount("/proc", new ProcFs());
-
-        VFS.Mount("/etc", new TempFs());
-
-        IUserStore store = UserSystemInitializer.CreateDefault();
-
-        if (!VFS.FileExists("/etc/passwd") || !VFS.FileExists("/etc/shadow") || !VFS.FileExists("/etc/group"))
-        {
-            logger.Warn("Unable to locate user files. Trying to save defaults.");
-
-            var snapshot = IdentitySerializer.Serialize(store);
-
-            VFS.WriteAllText("/etc/passwd", snapshot.Passwd);
-            VFS.WriteAllText("/etc/shadow", snapshot.Shadow);
-            VFS.WriteAllText("/etc/group", snapshot.Group);
-        }
-        else
-        {
-            Result<string, KernelError> passwd = VFS.ReadAllText("/etc/passwd");
-            Result<string, KernelError> shadow = VFS.ReadAllText("/etc/shadow");
-            Result<string, KernelError> group = VFS.ReadAllText("/etc/group");
-
-            if (passwd.IsSuccess && shadow.IsSuccess && group.IsSuccess)
-            {
-                store = IdentitySerializer.Deserialize(
-                    passwd.Value,
-                    shadow.Value,
-                    group.Value);
-            }
-            else
-                logger.Warn("Unable to read user files. Using defaults.");
-        }
-
-        logger.Info("Initalizing user auth service and empty user session.");
-
-        AuthService = new AuthService(store);
-        UserSession = new UserSession(User.None);
+        // // Mount ram backed FAT as tmp
+        // MemoryBlockDevice ramDisk = new("RAMDISK", 512, 65536);
+        // FatFilesystemType ramFat = new(ramDisk);
+        // 
+        // VfsInit.s_filesystemTypes["fat"].TryFormat(default, new FatFormatOptions { Type = FatType.Fat16 });
+        // 
+        // VfsManager.RegisterFilesystem("ramfat", ramFat);
+        // VfsManager.TryMount("ramfat", "", MountFlags.None, "/tmp", out _);
 
         logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}.");
 
-        KernelPanic.Panic("test");
+        // check if probing works
+        logger.Info("Probig primary partition for fat");
 
-        Stop();
+        if (FatProbe.TryProbe(StorageManager.Partitions[0], out FilesystemProbeResult probeResult))
+        {
+            logger.Info("Probing successfull");
+            logger.Info($"FS type is -> {probeResult.Filesystem}");
+            logger.Info($"FS UUID -> {probeResult.Uuid}");
+            logger.Info($"FS Label -> {probeResult.Label}");
+        }
+        else
+            logger.Info("Probing failed");
+
+        logger.Info("Unmouting initfs");
+        if (VfsManager.TryUnmount("/"))
+            logger.Info("Unmounted initfs");
+        else
+            logger.Error("Failed to unmount initfs");
+
+        throw new Exception("Returned from init");
     }
 
     protected override void Run()
@@ -168,5 +193,31 @@ public class Kernel : Sys.Kernel
 
         s_kernelLogger.Info("Kernel cleanup finished.");
         s_kernelLogger.Info("Bye.");
+    }
+
+    private ArchiveImage LoadInitRamFs(byte[] data, Logger logger)
+    {
+        logger.Info("Has initramfs provided");
+
+        // First, check if initramfs is no compressed
+        Option<IArchivator> archivator = ArchivatorFactory.Detect(data);
+
+        if (archivator.IsSome)
+        {
+            return archivator.Value.Read(data);
+        }
+
+        // We couldn't detect, so check if it's compressed
+        IArchiveCompressor compressor = ArchiveCompressorFactory.Detect(data)
+            .OrThrow("initramfs image is unsupported (either archive image or compression)");
+
+        byte[] decompressed = compressor.Decompress(data);
+
+        archivator = ArchivatorFactory.Detect(decompressed);
+        
+        if (archivator.IsNone)
+            throw new DataException("initramfs image is not supported");
+        
+        return archivator.Value.Read(decompressed);
     }
 }

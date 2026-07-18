@@ -3,7 +3,7 @@
   "qemu": {
     "memory": "512M",
     "machineType": "q35",
-    "cpuModel": "max",
+    "cpuModel": "host",
     "serialMode": "stdio",
     "networkCard": "none",
     "keyboard": "ps2",
@@ -11,6 +11,12 @@
     "enableNetwork": false,
     "networkPorts": "5555",
     "extraArgs": "",
-    "disks": []
+    "disks": [
+      {
+        "path": "disk.img",
+        "type": "ahci",
+        "size": "512M"
+      }
+    ]
   }
 }
