@@ -17,7 +17,7 @@ internal static class VfsInit
 
     public static void InitVfs(Logger logger)
     {
-        foreach((string name, IVfsFilesystemType type) in s_filesystemTypes)
+        foreach ((string name, IVfsFilesystemType type) in s_filesystemTypes)
         {
             logger.Info($"Registering fs type '{name}'");
             if (!VfsManager.RegisterFilesystem(name, type))

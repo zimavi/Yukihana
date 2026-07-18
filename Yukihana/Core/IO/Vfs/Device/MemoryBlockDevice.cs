@@ -23,9 +23,9 @@ internal sealed class MemoryBlockDevice : IBlockDevice
 
     public string Name { get; }
 
-    public void Flush() {}
-    public void ReadBlock(ulong blockNo, ulong blockCount, Span<byte> data) 
+    public void Flush() { }
+    public void ReadBlock(ulong blockNo, ulong blockCount, Span<byte> data)
         => _storage.AsSpan((int)(blockNo * BlockSize), (int)(blockCount * BlockSize)).CopyTo(data);
-    public void WriteBlock(ulong blockNo, ulong blockCount, ReadOnlySpan<byte> data) 
+    public void WriteBlock(ulong blockNo, ulong blockCount, ReadOnlySpan<byte> data)
         => data.Slice(0, (int)(blockCount * BlockSize)).CopyTo(_storage.AsSpan((int)(blockNo * BlockSize)));
 }

@@ -1,4 +1,4 @@
- // Yukihana OS 2026 Yukihana OS Contributors
+// Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Data;
@@ -21,7 +21,7 @@ using Yukihana.Core.IO.Vfs.Filesystem.InitFs;
 using Yukihana.Core.IO.Vfs.Probe;
 using Yukihana.Core.IO.Vfs.Probe.Filesystem;
 using Yukihana.Core.Primitives;
-using Yukihana.Core.Resources; 
+using Yukihana.Core.Resources;
 using Yukihana.Core.Security;
 using Sys = Cosmos.Kernel.System;
 
@@ -100,7 +100,7 @@ public class Kernel : Sys.Kernel
         ArchiveImage? ramfsImage = null;
         if (ramfsBytes is not null)
             ramfsImage = LoadInitRamFs(ramfsBytes, logger); // This throws if cannot read
-        
+
         if (ramfsImage is not null)
         {
             MemoryBlockDevice ramfsDisk = new("RAMFSDISK", 512, 65536);
@@ -122,7 +122,7 @@ public class Kernel : Sys.Kernel
         logger.Info("Dumping VFS mounts");
         var mounts = VfsManager.Mounts;
 
-        foreach(var mount in mounts)
+        foreach (var mount in mounts)
         {
             logger.Info($"   -> Type='{mount.FilesystemType.GetType().Name}', Mount='{mount.MountPoint}', Name='{mount.Name}'");
         }
@@ -214,10 +214,10 @@ public class Kernel : Sys.Kernel
         byte[] decompressed = compressor.Decompress(data);
 
         archivator = ArchivatorFactory.Detect(decompressed);
-        
+
         if (archivator.IsNone)
             throw new DataException("initramfs image is not supported");
-        
+
         return archivator.Value.Read(decompressed);
     }
 }

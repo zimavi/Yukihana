@@ -16,7 +16,7 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
     private readonly ulong _blockCount;
     private readonly List<InitfsInode> _inodes = [];
 
-    private static ReadOnlySpan<byte> MAGIC => [ 0x69, 0x6e, 0x69, 0x74]; // ASCII "init"
+    private static ReadOnlySpan<byte> MAGIC => [0x69, 0x6e, 0x69, 0x74]; // ASCII "init"
 
     public InitfsFilesystemType(IBlockDevice device, ArchiveImage image)
     {
@@ -38,12 +38,12 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
         InitfsInode? rootInode = LoadArchiveData();
         if (rootInode is null)
             return false;
-        
+
         // Write Magic to blockdevice
         Span<byte> buffer = stackalloc byte[(int)_blockSize];
         MAGIC.CopyTo(buffer);
         _blockDevice.WriteBlock(0, 1, buffer);
-        
+
         superblock = new InitfsSuperblock(_blockDevice, rootInode);
         return true;
     }
@@ -74,28 +74,28 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
         foreach (ArchiveEntry entry in _archive.Entries)
         {
             logger.Info($"Processing entry '{entry.Path}'");
-            
+
             if (string.IsNullOrEmpty(entry.Path))
                 continue;
 
             string path = entry.Path;
             if (path.StartsWith('/'))
                 path = path.Substring(1);
-            
+
             string[] parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
                 continue;
-            
+
             string currentPath = "";
             InitfsInode parent = root;
-            
+
             logger.Info("Processing path tree");
 
             for (int i = 0; i < parts.Length - 1; i++)
             {
                 string part = parts[i];
                 currentPath = Path.Combine(currentPath, part);
-                
+
                 logger.Info($"Current part is '{part}' with path '{currentPath}'");
 
                 InitfsInode? child = parent.Children.FirstOrDefault(c => c.Name == part && c.Kind == ArchiveEntryKind.Directory);
@@ -118,7 +118,7 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
             logger.Info($"Creating leaf with name '{leafName}' with path '{currentPath}'");
 
             ArchiveEntryKind kind = entry.Kind;
-            if (entry.Kind == ArchiveEntryKind.File && 
+            if (entry.Kind == ArchiveEntryKind.File &&
                 parent.Children.Any(c => c.Name == leafName && c.Kind == ArchiveEntryKind.Directory))
             {
                 logger.Warn("Collision of file and directory. Prefering file");

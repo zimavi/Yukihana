@@ -111,7 +111,8 @@ public static partial class ExceptionExtensions
         {
             sb.Append('\n');
             sb.Append("   " + ex.StackTrace);
-        } else
+        }
+        else
         {
             sb.Append("   --- NO STACK TRACE AVAILABLE ---");
         }
