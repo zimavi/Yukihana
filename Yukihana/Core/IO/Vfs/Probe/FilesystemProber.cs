@@ -14,7 +14,7 @@ internal sealed class FilesystemProber
 
     public static bool ProbeFilesystem(Partition device, out FilesystemProbeResult? result)
     {
-        foreach(IFilesystemProbe probe in s_filesystemProbes)
+        foreach (IFilesystemProbe probe in s_filesystemProbes)
         {
             bool isSuccess = probe.TryProbe(device, out var res);
 

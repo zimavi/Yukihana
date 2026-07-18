@@ -14,7 +14,7 @@ public sealed class VfsConfigManager
     private readonly List<VfsMountConfig> _configs = [];
     private readonly Dictionary<string, IVfsFilesystemType> _filesystemTypes = [];
 
-    private readonly Logger _logger = new ("vfsman");
+    private readonly Logger _logger = new("vfsman");
 
     public void RegisterFilesystem(string name, IVfsFilesystemType type)
     {
@@ -39,7 +39,7 @@ public sealed class VfsConfigManager
     {
         _logger.Info("Trying to mount all disks");
         mountedFilesystems = [];
-        
+
         foreach (VfsMountConfig config in _configs)
         {
             if (TryMount(config, out VfsManager.VfsMount? mount))
@@ -50,7 +50,7 @@ public sealed class VfsConfigManager
             else
                 _logger.Error($"Unable to mount '{config.Source}' at '{config.MountPoint}'");
         }
-        
+
         return true;
     }
 
@@ -58,14 +58,14 @@ public sealed class VfsConfigManager
     {
         mount = null;
 
-        if (string.IsNullOrEmpty(config.Source) || 
-            string.IsNullOrEmpty(config.MountPoint) || 
+        if (string.IsNullOrEmpty(config.Source) ||
+            string.IsNullOrEmpty(config.MountPoint) ||
             string.IsNullOrEmpty(config.FilesystemType))
         {
             _logger.Error($"Unable to mount {config.Source} at {config.MountPoint} because some fields are empty");
             return false;
         }
-            
+
 
         if (!_filesystemTypes.TryGetValue(config.FilesystemType, out IVfsFilesystemType? fsType))
         {
@@ -73,7 +73,7 @@ public sealed class VfsConfigManager
             return false;
         }
 
-        
+
         _logger.Info($"Resolving deviceId for {config.Source}");
 
         string resolvedSource = ResolveDeviceIdentifier(config);
@@ -93,7 +93,7 @@ public sealed class VfsConfigManager
 
     private string ResolveDeviceIdentifier(VfsMountConfig config)
     {
-        switch(config.SourceType)
+        switch (config.SourceType)
         {
             case SourceType.Path:
                 return config.Source;
@@ -110,9 +110,9 @@ public sealed class VfsConfigManager
 
                 if (int.TryParse(config.Source, out int idx))
                     return ResolveByPartitionIndex(idx);
-                
+
                 return string.Empty;
-            
+
             default:
                 return config.Source;
         }
@@ -123,7 +123,7 @@ public sealed class VfsConfigManager
     {
         _logger.Info($"Searching for partition with label '{label}'");
         IReadOnlyList<Partition> partitions = StorageManager.Partitions;
-        for(int i = 0; i < partitions.Count; i++)
+        for (int i = 0; i < partitions.Count; i++)
         {
             Partition part = partitions[i];
             if (part.Name == label)
@@ -134,7 +134,7 @@ public sealed class VfsConfigManager
         }
 
         _logger.Error($"Couldn't find matching label!");
-        
+
         return string.Empty;
     }
 
@@ -144,10 +144,10 @@ public sealed class VfsConfigManager
         Guid guid = Guid.Parse(uuid);
 
         IReadOnlyList<Partition> partitions = StorageManager.Partitions;
-        for(int i = 0; i < partitions.Count; i++)
+        for (int i = 0; i < partitions.Count; i++)
         {
             Partition part = partitions[i];
-            
+
             if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult? result))
                 continue;
 
@@ -171,7 +171,7 @@ public sealed class VfsConfigManager
             _logger.Info($"Found matching partition at index '{index}'");
             return $"{index}";
         }
-        
+
         return string.Empty;
     }
 
@@ -179,7 +179,7 @@ public sealed class VfsConfigManager
     {
         if (VfsManager.TryMount(filesystemType, source, flags, mountPoint, out VfsManager.VfsMount? mount))
             return mount;
-        
+
         return null;
     }
 

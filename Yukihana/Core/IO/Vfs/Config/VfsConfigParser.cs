@@ -23,7 +23,7 @@ public sealed partial class VfsConfigParser
 
         string[] lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
 
-        foreach(string line in lines)
+        foreach (string line in lines)
         {
             string trimmed = line.Trim();
             if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
@@ -57,9 +57,9 @@ public sealed partial class VfsConfigParser
         MountFlags flags = MountFlags.None;
         string[] flagList = flagsString.Split(',');
 
-        foreach(string flag in flagList)
+        foreach (string flag in flagList)
         {
-            switch(flag.ToLowerInvariant())
+            switch (flag.ToLowerInvariant())
             {
                 case "ro":
                 case "readonly":
@@ -87,13 +87,13 @@ public sealed partial class VfsConfigParser
     {
         if (UuidRegex().IsMatch(source.AsSpan(5)))
             return SourceType.Uuid;
-        
+
         if (source.StartsWith("LABEL="))
             return SourceType.Label;
-        
+
         if (int.TryParse(source, out _))
             return SourceType.PartitionIndex;
-        
+
         return SourceType.Path;
     }
 

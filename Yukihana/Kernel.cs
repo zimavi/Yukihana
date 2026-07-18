@@ -52,7 +52,7 @@ public class Kernel : Sys.Kernel
         s_kernelLogger = new();
         s_kernelLogger.Info("Static Kernel constructor called");
         s_kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
-        
+
         s_vfsMan = new();
     }
 
@@ -165,9 +165,9 @@ public class Kernel : Sys.Kernel
         // Mount ram backed FAT as tmp
         MemoryBlockDevice ramDisk = new("RAMDISK", 512, 65536);
         FatFilesystemType ramFat = new(ramDisk);
-        
+
         VfsInit.s_filesystemTypes["fat"].TryFormat(default, new FatFormatOptions { Type = FatType.Fat16 });
-        
+
         VfsManager.RegisterFilesystem("ramfat", ramFat);
         VfsManager.TryMount("ramfat", "", MountFlags.None, "/tmp", out _);
 
