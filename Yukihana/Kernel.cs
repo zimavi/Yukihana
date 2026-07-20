@@ -3,7 +3,6 @@
 
 using System.Data;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Cosmos.Kernel.HAL.Vfs;
 using Cosmos.Kernel.System.Filesystems.Fat;
 using Cosmos.Kernel.System.Graphics;
@@ -22,7 +21,6 @@ using Yukihana.Core.IO.Vfs.Config;
 using Yukihana.Core.IO.Vfs.Device;
 using Yukihana.Core.IO.Vfs.Filesystem.InitFs;
 using Yukihana.Core.IO.Vfs.Probe;
-using Yukihana.Core.IO.Vfs.Probe.Filesystem;
 using Yukihana.Core.Primitives;
 using Yukihana.Core.Resources;
 using Yukihana.Core.Security;
@@ -94,7 +92,7 @@ public class Kernel : Sys.Kernel
                 ramfsBytes = memStream.ToArray();
             }
             else
-                logger.Warn("No initramfs archive provided, perhaps it's missing?");
+                logger.Warn("No initramfs archive provided.");
         }
 
         logger.Info($"Discovered {StorageManager.Partitions.Count} partitions");
@@ -172,6 +170,22 @@ public class Kernel : Sys.Kernel
         VfsManager.TryMount("ramfat", "", MountFlags.None, "/tmp", out _);
 
         logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}.");
+
+        logger.Info("Probing all partitions");
+
+        foreach(Partition part in StorageManager.Partitions)
+        {
+            if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult? result))
+            {
+                logger.Error($"Failed to probe partition {part.Name}");
+                continue;
+            }
+
+            logger.Info($"Probed partition {part.Name}:");
+            logger.Info($"  ->  fs={result!.Value.Filesystem}");
+            logger.Info($"  ->  uuid={result!.Value.Uuid}");
+            logger.Info($"  ->  label={result!.Value.Label}");
+        }
 
         throw new Exception("Returned from init");
     }

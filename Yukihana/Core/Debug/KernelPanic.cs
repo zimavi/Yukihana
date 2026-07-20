@@ -10,6 +10,7 @@ namespace Yukihana.Core.Debug;
 public static class KernelPanic
 {
     private static int s_panicEntered;
+    private static readonly object s_lock = new();
 
     public static void Panic(
         string reason,
@@ -24,6 +25,18 @@ public static class KernelPanic
 
         ConsoleRenderer.Enabled = true;
 
+        lock(s_lock)
+        {
+            ThreadLockedPanic(reason, m, f, l);
+        }
+
+        PlatformHAL.CpuOps?.Halt();
+
+        for (; ; );
+    }
+
+    private static void ThreadLockedPanic(string reason, string m, string f, int l)
+    {
         Print("*** KERNEL PANIC ***", ConsoleColor.Red);
         Print($"Kernel: {KernelInfoString(VersionInfo.Kernel)}", ConsoleColor.Gray);
         Print($"Framework: {FrameworkInfoString(VersionInfo.Framework)}", ConsoleColor.Gray);
@@ -45,10 +58,6 @@ public static class KernelPanic
         MirrorToSerial(reason, m, f, l, logs);
 
         Print("\nSystem halted.", ConsoleColor.Red);
-
-        PlatformHAL.CpuOps?.Halt();
-
-        for (; ; );
     }
 
     private static void MinimalFailSafePanic(string reason)

@@ -15,6 +15,8 @@ public static class KernelLog
     public static bool LogToScreen { get; set; }
     public static bool LogToUart { get; set; } = true;
 
+    private static readonly object s_lock = new();
+
     public static void Write(
         LogLevel level,
         string source,
@@ -32,13 +34,16 @@ public static class KernelLog
             file,
             line);
 
-        s_entries.Add(entry);
+        lock (s_lock)
+        {
+            s_entries.Add(entry);
 
-        if (level >= SerialLevel && LogToUart)
-            Serial.WriteString(FormatForSerial(entry) + "\n");
+            if (level >= SerialLevel && LogToUart)
+                Serial.WriteString(FormatForSerial(entry) + "\n");
 
-        if (LogToScreen)
-            ConsoleRenderer.Render(entry);
+            if (LogToScreen)
+                ConsoleRenderer.Render(entry);
+        }
     }
 
     private static string FormatForSerial(LogEntry e)
