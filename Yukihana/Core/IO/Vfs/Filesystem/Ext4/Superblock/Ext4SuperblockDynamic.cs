@@ -16,7 +16,8 @@ internal readonly struct Ext4SuperblockDynamic
     public readonly Ext4SuperblockIncompatibleFeatures IncompatibleFeatures;
     public readonly Ext4SuperblockRoFeatures RoCompatibleFeatures;
     public readonly Byte16 Uuid;
-    public readonly Byte64 VolumeLabel;
+    public readonly Byte16 VolumeLabel;
+    public readonly Byte64 LastMounted;
     public readonly uint AlgorithmUsageBitmap; // For compression. Not used.
 
     // Directory preallocation must only happend if coresponding feature is set.
@@ -67,13 +68,13 @@ internal readonly struct Ext4SuperblockDynamic
     public readonly uint ErrorCount; // Number of errors seen.
     public readonly uint FirstErrorTime;
     public readonly uint FirstErrorInode;
-    public readonly uint FirstErrorBlock;
+    public readonly ulong FirstErrorBlock;
     public readonly Byte32 FirstErrorFunction; // Name of function where the error happened.
     public readonly uint FirstErrorLine;
     public readonly uint LastErrorTime;
     public readonly uint LastErrorInode;
     public readonly uint LastErrorLine;
-    public readonly uint LastErrorBlock;
+    public readonly ulong LastErrorBlock;
     public readonly Byte32 LastErrorFunction; // Name of function where the error happened.
     public readonly Byte64 MountOpts; // ASCIIZ string of mount options.
     public readonly uint UserInodeQuotaFile;
