@@ -39,5 +39,5 @@ enum Ext4SuperblockCompatibleFeatures : uint
     // Orphan file allocated. This is special file for more efficient tracking of
     // unlinked but still open inodes. When there may be any entries in the file,
     // we additionally set proper rocompat feature
-    RoOrphanPresent = 0x1000 
+    RoOrphanPresent = 0x1000
 }

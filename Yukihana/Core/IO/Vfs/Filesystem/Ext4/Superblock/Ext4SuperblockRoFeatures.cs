@@ -37,7 +37,7 @@ internal enum Ext4SuperblockRoFeatures : uint
     // Filesystem supports replicas. This feature is neither in the kernel nor e2fsprogs.
     Replica = 0x800,
     ReadOnly = 0x1000,
-    
+
     // Filesystem tracks project quotas.
     Project = 0x2000,
 

@@ -25,7 +25,7 @@ public static class KernelPanic
 
         ConsoleRenderer.Enabled = true;
 
-        lock(s_lock)
+        lock (s_lock)
         {
             ThreadLockedPanic(reason, m, f, l);
         }

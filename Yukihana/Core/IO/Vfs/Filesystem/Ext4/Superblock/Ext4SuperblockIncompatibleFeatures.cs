@@ -25,7 +25,7 @@ enum Ext4SuperblockIncompatibleFeatures : uint
 
     // Not implemented?
     DirectoryData = 0x1000,
-    
+
     // Metadata checksum seed is stored in the superblock. This feature enables
     // administrator to change the UUID of metadata checksum filesystem while
     // filesystem is mounted; without it, the checksum definition requires all

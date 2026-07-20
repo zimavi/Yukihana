@@ -173,7 +173,7 @@ public class Kernel : Sys.Kernel
 
         logger.Info("Probing all partitions");
 
-        foreach(Partition part in StorageManager.Partitions)
+        foreach (Partition part in StorageManager.Partitions)
         {
             if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult? result))
             {

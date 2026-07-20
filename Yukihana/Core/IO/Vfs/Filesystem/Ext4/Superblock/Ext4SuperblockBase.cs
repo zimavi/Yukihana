@@ -39,5 +39,5 @@ internal readonly struct Ext4SuperblockBase
     public readonly uint RevisionLevel;
     public readonly ushort DefaultUid; // For reserved blocks.
     public readonly ushort DefaultGuid;
-    
+
 }

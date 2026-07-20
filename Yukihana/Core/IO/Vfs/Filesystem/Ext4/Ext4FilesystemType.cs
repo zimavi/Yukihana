@@ -19,20 +19,20 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
     private const Ext4SuperblockCompatibleFeatures COMPATIBLE_FEATURES =
         Ext4SuperblockCompatibleFeatures.HasJournal | Ext4SuperblockCompatibleFeatures.DirIndex |
         Ext4SuperblockCompatibleFeatures.SparseSuper2;
-    
-    private const Ext4SuperblockIncompatibleFeatures INCOMPATIBLE_FEATURES = 
-        Ext4SuperblockIncompatibleFeatures.DirFiletype | Ext4SuperblockIncompatibleFeatures.UseExtents | 
-        Ext4SuperblockIncompatibleFeatures.Bits64 | Ext4SuperblockIncompatibleFeatures.FlexibleBlockGroups | 
+
+    private const Ext4SuperblockIncompatibleFeatures INCOMPATIBLE_FEATURES =
+        Ext4SuperblockIncompatibleFeatures.DirFiletype | Ext4SuperblockIncompatibleFeatures.UseExtents |
+        Ext4SuperblockIncompatibleFeatures.Bits64 | Ext4SuperblockIncompatibleFeatures.FlexibleBlockGroups |
         Ext4SuperblockIncompatibleFeatures.InlineData | Ext4SuperblockIncompatibleFeatures.ChecksumSeed |
         Ext4SuperblockIncompatibleFeatures.Recover;
-    
+
     private const Ext4SuperblockRoFeatures READ_ONLY_FEATURES =
         Ext4SuperblockRoFeatures.SparseSuperblocks | Ext4SuperblockRoFeatures.LargeFile | Ext4SuperblockRoFeatures.HugeFile |
         Ext4SuperblockRoFeatures.DirectoryNlink | Ext4SuperblockRoFeatures.ExtraInodeSize | Ext4SuperblockRoFeatures.MetadataChecksum |
         Ext4SuperblockRoFeatures.GdtChecksums | Ext4SuperblockRoFeatures.ReadOnly;
 
     private const int DecimalRadix = 10;
-    
+
     public Ext4FilesystemType()
     { }
 
@@ -66,10 +66,10 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
             return false;
 
         Ext4SuperblockBase superblockBase = MemoryMarshal.Read<Ext4SuperblockBase>(buffer);
-        
+
         if (superblockBase.RevisionLevel != Ext4SuperblockBase.EXT4_DYNAMIC_REV) // We won't support legacy version
             return false;
-        
+
         int offset = 0;
 
         unsafe
@@ -81,7 +81,7 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
         if (!ValidateFeatures(superblockDynamic, flags, out _))
             return false;
-        
+
         if (NeedsRecovery(superblockDynamic))
             return false;
 
@@ -144,23 +144,23 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
     {
         forceReadOnly = false;
 
-        uint unknownCompact = 
+        uint unknownCompact =
             (uint)(sb.CompatibleFeatures & ~COMPATIBLE_FEATURES);
-        
+
         uint unknownIncopat =
             (uint)(sb.IncompatibleFeatures & ~INCOMPATIBLE_FEATURES);
-        
+
         if (unknownIncopat != 0) // there are incompatible features we do not support
             return false;
 
-        uint unknownRo = 
+        uint unknownRo =
             (uint)(sb.RoCompatibleFeatures & ~READ_ONLY_FEATURES);
-        
+
         if (unknownRo != 0)
         {
             forceReadOnly = true;
 
-            if((mountFlags & MountFlags.ReadOnly) == 0)
+            if ((mountFlags & MountFlags.ReadOnly) == 0)
                 return false;
         }
 

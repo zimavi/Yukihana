@@ -5,7 +5,7 @@ using Cosmos.Kernel.HAL.Interfaces.Devices;
 
 namespace Yukihana.Core.IO.Vfs.Device;
 
-internal sealed class BlockDeviceStream (IBlockDevice blockDevice)
+internal sealed class BlockDeviceStream(IBlockDevice blockDevice)
 {
     private readonly IBlockDevice _device = blockDevice ?? throw new ArgumentNullException(nameof(blockDevice));
     private readonly byte[] _blockBuffer = new byte[(int)blockDevice.BlockSize];

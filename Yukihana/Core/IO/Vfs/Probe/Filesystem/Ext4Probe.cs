@@ -30,7 +30,7 @@ public sealed class Ext4Probe : IFilesystemProbe
             return false;
 
         Ext4SuperblockBase superblockBase = MemoryMarshal.Read<Ext4SuperblockBase>(buffer);
-        
+
         // Check if we have dynamic block part
 
         if (superblockBase.RevisionLevel != Ext4SuperblockBase.EXT4_DYNAMIC_REV)

@@ -78,7 +78,7 @@ internal readonly struct Ext4SuperblockDynamic
     public readonly Byte64 MountOpts; // ASCIIZ string of mount options.
     public readonly uint UserInodeQuotaFile;
     public readonly uint GroupInodeQuotaFile;
-    
+
     // Overhead blocks/clusters in fs. 
     // (Huh? This field is always zero, which means that the kernel calculates it dynamically.)
     public readonly uint OverheadBlocks;

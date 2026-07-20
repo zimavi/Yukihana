@@ -16,7 +16,7 @@ internal enum Ext4DefaultMountOptions : uint
 
     // POSIX acces control list.
     Acl = 0x0008,
-    
+
     // Do not support 32-bit UIDs.
     UID16 = 0x0010,
 
