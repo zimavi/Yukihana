@@ -20,8 +20,9 @@ using Yukihana.Core.IO.Vfs.Config;
 using Yukihana.Core.IO.Vfs.Device;
 using Yukihana.Core.IO.Vfs.Filesystem.InitFs;
 using Yukihana.Core.Primitives;
-using Yukihana.Core.Resources;
 using Yukihana.Core.Security;
+using Yukihana.Resources;
+using Yukihana.Security;
 using Sys = Cosmos.Kernel.System;
 
 namespace Yukihana;
