@@ -97,8 +97,7 @@ public sealed partial class VfsConfigParser
         return SourceType.Path;
     }
 
-    [GeneratedRegex(@"^([^#\s]+)\s+([^#\s]+)\s+([^#\s]+)\s+([^#\s]+)\s+(\d+)\s+(\d+)", RegexOptions.Compiled
-    )]
+    [GeneratedRegex(@"^([^#\s]+)\s+([^#\s]+)\s+([^#\s]+)\s+([^#\s]+)\s+(\d+)\s+(\d+)")]
     private static partial Regex FstabRegex();
     [GeneratedRegex(@"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")]
     private static partial Regex UuidRegex();

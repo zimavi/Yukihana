@@ -220,8 +220,14 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
     private bool ValidateSuperblock(Ext4SuperblockDynamic sb, ReadOnlySpan<byte> sbBytes)
     {
-        System.Diagnostics.Debug.Assert(sbBytes.Length == 1024, "The superblock span is incorrect length");
         s_logger.Info("Validating superblock");
+
+        if (sbBytes.Length != 1024)
+        {
+            s_logger.Error("Superblock length invalid (1024 expected, got {sbBytes.Length})");
+            return false;
+        }
+
         bool hasChecksumFeature = sb.RoCompatibleFeatures.HasFlag(Ext4SuperblockRoFeatures.MetadataChecksum);
 
         if (!hasChecksumFeature)
@@ -229,14 +235,6 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
             s_logger.Warn("Filesystem does not support metadata checksums. Skipping superblock validation");
             return true; // Do not check checksum
         }
-
-        // Replace last 4 bytes with zeros
-        Span<byte> temp = stackalloc byte[1024];
-        sbBytes.CopyTo(temp);
-        temp[^1] = 0;
-        temp[^2] = 0;
-        temp[^3] = 0;
-        temp[^4] = 0;
 
         bool hasSeed = sb.IncompatibleFeatures.HasFlag(Ext4SuperblockIncompatibleFeatures.ChecksumSeed);
 
@@ -253,7 +251,7 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
             s_logger.Info($"Calculated seed -> {crc}");
         }
 
-        uint finalChecksum = ~Ext4Checksum.Append(crc, temp);
+        uint finalChecksum = ~Ext4Checksum.Append(crc, sbBytes.Slice(0, 1020));
 
         if (finalChecksum != sb.Checksum)
         {

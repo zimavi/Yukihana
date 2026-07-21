@@ -13,11 +13,6 @@
     "extraArgs": "",
     "disks": [
       {
-        "path": "disk.img",
-        "type": "ahci",
-        "size": "512M"
-      },
-      {
         "path": "ext_disk.img",
         "type": "nvme",
         "size": "2G"

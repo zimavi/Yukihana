@@ -158,6 +158,7 @@ public class Kernel : Sys.Kernel
         else
             logger.Error("Unable to locate fstab! No filesystem will be mounted");
 
+        /*
         logger.Warn("Mounting /tmp as FAT 16, bypassing fstab");
 
         // Mount ram backed FAT as tmp
@@ -168,24 +169,9 @@ public class Kernel : Sys.Kernel
 
         VfsManager.RegisterFilesystem("ramfat", ramFat);
         VfsManager.TryMount("ramfat", "", MountFlags.None, "/tmp", out _);
+        */
 
         logger.Info($"Base kernel initialization finished at {DateTime.Now:dd-MM-yyyy HH:mm:ss.fff}.");
-
-        logger.Info("Probing all partitions");
-
-        foreach (Partition part in StorageManager.Partitions)
-        {
-            if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult result))
-            {
-                logger.Error($"Failed to probe partition {part.Name}");
-                continue;
-            }
-
-            logger.Info($"Probed partition {part.Name}:");
-            logger.Info($"  ->  fs={result.Filesystem}");
-            logger.Info($"  ->  uuid={result.Uuid}");
-            logger.Info($"  ->  label={result.Label}");
-        }
 
         throw new Exception("Returned from init");
     }
