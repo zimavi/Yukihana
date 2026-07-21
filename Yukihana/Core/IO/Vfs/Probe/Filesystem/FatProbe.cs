@@ -2,6 +2,7 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using acryptohashnet;
 using Cosmos.Kernel.System.Filesystems.Fat;

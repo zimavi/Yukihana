@@ -2,6 +2,7 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Cosmos.Kernel.System.Storage;
 using Yukihana.Core.IO.Vfs.Device;

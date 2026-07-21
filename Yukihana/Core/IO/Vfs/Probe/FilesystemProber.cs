@@ -1,6 +1,7 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
+using System.Diagnostics.CodeAnalysis;
 using Cosmos.Kernel.System.Storage;
 using Yukihana.Core.IO.Vfs.Probe.Filesystem;
 
@@ -13,11 +14,11 @@ internal sealed class FilesystemProber
         new Ext4Probe(),
     ];
 
-    public static bool ProbeFilesystem(Partition device, out FilesystemProbeResult? result)
+    public static bool ProbeFilesystem(Partition device, out FilesystemProbeResult result)
     {
         foreach (IFilesystemProbe probe in s_filesystemProbes)
         {
-            bool isSuccess = probe.TryProbe(device, out var res);
+            bool isSuccess = probe.TryProbe(device, out FilesystemProbeResult res);
 
             if (isSuccess)
             {
@@ -26,7 +27,7 @@ internal sealed class FilesystemProber
             }
         }
         // We couldn't identify filesystem
-        result = null;
+        result = default;
         return false;
     }
 }

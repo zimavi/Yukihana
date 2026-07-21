@@ -175,16 +175,16 @@ public class Kernel : Sys.Kernel
 
         foreach (Partition part in StorageManager.Partitions)
         {
-            if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult? result))
+            if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult result))
             {
                 logger.Error($"Failed to probe partition {part.Name}");
                 continue;
             }
 
             logger.Info($"Probed partition {part.Name}:");
-            logger.Info($"  ->  fs={result!.Value.Filesystem}");
-            logger.Info($"  ->  uuid={result!.Value.Uuid}");
-            logger.Info($"  ->  label={result!.Value.Label}");
+            logger.Info($"  ->  fs={result.Filesystem}");
+            logger.Info($"  ->  uuid={result.Uuid}");
+            logger.Info($"  ->  label={result.Label}");
         }
 
         throw new Exception("Returned from init");

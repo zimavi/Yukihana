@@ -148,10 +148,10 @@ public sealed class VfsConfigManager
         {
             Partition part = partitions[i];
 
-            if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult? result))
+            if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult result))
                 continue;
 
-            if (result!.Value.Uuid == guid)
+            if (result.Uuid == guid)
             {
                 _logger.Info($"Found matching partition at index '{i}'");
                 return $"{i}";
