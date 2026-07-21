@@ -9,12 +9,12 @@ public static class VersionInfo
 {
     public static readonly FrameworkInfo Framework = new(
         name: "CosmosOS",
-        version: new Version(3, 0, 71)
+        version: new Version(3, 0, 76)
     );
 
     public static readonly KernelInfo Kernel = new(
         name: "Yukihana",
         version: new Version(2, 0, 14),
-        revision: new DateTime(2026, 07, 21, 00, 47, 0, DateTimeKind.Utc)
+        revision: new DateTime(2026, 07, 21, 01, 01, 0, DateTimeKind.Utc)
     );
 }

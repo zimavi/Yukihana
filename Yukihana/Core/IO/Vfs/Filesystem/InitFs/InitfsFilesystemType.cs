@@ -1,6 +1,7 @@
 // Yukihana OS 2026 Yukihana OS Contributors
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
+using System.Diagnostics.CodeAnalysis;
 using Cosmos.Kernel.HAL.Interfaces.Devices;
 using Cosmos.Kernel.HAL.Vfs;
 using Yukihana.Core.Compression.Archives;
@@ -28,7 +29,7 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
         _blockCount = device.BlockCount;
     }
 
-    public bool TryMount(ReadOnlySpan<char> source, MountFlags flags, out IVfsSuperblock? superblock)
+    public bool TryMount(ReadOnlySpan<char> source, MountFlags flags, [NotNullWhen(true)] out IVfsSuperblock? superblock)
     {
         superblock = null;
 
@@ -48,7 +49,7 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
         return true;
     }
 
-    public bool TryFormat(ReadOnlySpan<char> source, IVfsFormatOptions? options)
+    public bool TryFormat(ReadOnlySpan<char> source, [NotNullWhen(true)] IVfsFormatOptions? options)
     {
         // We don't support formatting for initramfs
         return false;

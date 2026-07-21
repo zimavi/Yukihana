@@ -1,4 +1,4 @@
-<Project Sdk="Cosmos.Sdk/3.0.71">
+<Project Sdk="Cosmos.Sdk/3.0.76">
   <PropertyGroup>
     
 
@@ -19,7 +19,7 @@
     <Hour>$([System.DateTime]::UtcNow.ToString("HH"))</Hour>
     <Minute>$([System.DateTime]::UtcNow.ToString("mm"))</Minute>
 
-    <CosmosVersion>3, 0, 71</CosmosVersion>
+    <CosmosVersion>3, 0, 76</CosmosVersion>
     <YukihanaVersion>2, 0, 14</YukihanaVersion>
 
     <YukihanaVersionInfo>
@@ -54,8 +54,8 @@ public static class VersionInfo
 
   <!-- Core kernel packages -->
   <ItemGroup>
-    <PackageReference Include="Cosmos.Kernel" Version="3.0.71" />
-    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.71" />
+    <PackageReference Include="Cosmos.Kernel" Version="3.0.76" />
+    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.76" />
   </ItemGroup>
 
   <ItemGroup>

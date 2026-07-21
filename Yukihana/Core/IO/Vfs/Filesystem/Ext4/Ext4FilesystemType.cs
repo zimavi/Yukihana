@@ -2,6 +2,7 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Cosmos.Kernel.HAL.Interfaces.Devices;
@@ -46,8 +47,8 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
     }
 
     public bool TryDestroy(ReadOnlySpan<char> source) => throw new NotImplementedException();
-    public bool TryFormat(ReadOnlySpan<char> source, IVfsFormatOptions? options) => throw new NotImplementedException();
-    public bool TryMount(ReadOnlySpan<char> source, MountFlags flags, out IVfsSuperblock? superblock)
+    public bool TryFormat(ReadOnlySpan<char> source, [NotNullWhen(true)] IVfsFormatOptions? options) => throw new NotImplementedException();
+    public bool TryMount(ReadOnlySpan<char> source, MountFlags flags, [NotNullWhen(true)] out IVfsSuperblock? superblock)
     {
         s_logger.Info("Attempt to mount partition as ext4");
 
