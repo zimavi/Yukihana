@@ -43,5 +43,5 @@ jobs:
               run: cosmos install -y
 
             - name: 🚀 Build kernel (Release ${{ matrix.arch }})
-              working-directory: Yukihana
-              run: cosmos build -v -c Release --project src/Yukihana -a ${{ matrix.arch }}
+              working-directory: src/Yukihana
+              run: cosmos build -v -c Release -a ${{ matrix.arch }}
