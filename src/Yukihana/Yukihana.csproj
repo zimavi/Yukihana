@@ -1,0 +1,71 @@
+<Project Sdk="Cosmos.Sdk/3.0.76">
+  <PropertyGroup>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <CosmosKernelClass>Yukihana.Kernel</CosmosKernelClass>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <CosmosEnableStorage>true</CosmosEnableStorage>
+
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NAOT0007</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <!-- Generate version info -->
+  <PropertyGroup>
+    <Year>$([System.DateTime]::UtcNow.ToString("yyyy"))</Year>
+    <Month>$([System.DateTime]::UtcNow.ToString("MM"))</Month>
+    <Day>$([System.DateTime]::UtcNow.ToString("dd"))</Day>
+    <Hour>$([System.DateTime]::UtcNow.ToString("HH"))</Hour>
+    <Minute>$([System.DateTime]::UtcNow.ToString("mm"))</Minute>
+
+    <CosmosVersion>3, 0, 76</CosmosVersion>
+    <YukihanaVersion>2, 0, 14</YukihanaVersion>
+
+    <YukihanaVersionInfo>
+      <![CDATA[
+// Yukihana OS 2026 Yukihana OS Contributors
+// Licensed under the Apache 2.0 License. See LICENSE for details.
+
+// This file is auto-generated. Do not edit.
+
+namespace Yukihana.Core%3b
+
+public static class VersionInfo
+{
+    public static readonly FrameworkInfo Framework = new(
+        name: "CosmosOS",
+        version: new Version($(CosmosVersion))
+    )%3b
+
+    public static readonly KernelInfo Kernel = new(
+        name: "Yukihana",
+        version: new Version($(YukihanaVersion)),
+        revision: new DateTime($(Year), $(Month), $(Day), $(Hour), $(Minute), 0, DateTimeKind.Utc)
+    )%3b
+}]]>
+    </YukihanaVersionInfo>
+  </PropertyGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <WriteLinesToFile File="Core/VersionInfo.cs" Lines="$(YukihanaVersionInfo)" Overwrite="true" />
+  </Target>
+
+
+  <!-- Core kernel packages -->
+  <ItemGroup>
+    <PackageReference Include="Cosmos.Kernel" Version="3.0.76" />
+    <PackageReference Include="Cosmos.Kernel.System" Version="3.0.76" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/initramfs.cpio.gz" Condition="Exists('Resources/initramfs.cpio.gz')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
+    <PackageReference Include="acryptohashnet" Version="3.1.0" />
+  </ItemGroup>
+
+</Project>
