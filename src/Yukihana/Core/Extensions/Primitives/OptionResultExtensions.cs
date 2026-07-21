@@ -3,7 +3,7 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Yukihana.Core.Debug;
+using Yukihana.Debug;
 using Yukihana.Core.Exceptions;
 using Yukihana.Core.Primitives;
 

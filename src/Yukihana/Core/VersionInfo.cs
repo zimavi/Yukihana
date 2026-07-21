@@ -15,6 +15,6 @@ public static class VersionInfo
     public static readonly KernelInfo Kernel = new(
         name: "Yukihana",
         version: new Version(2, 0, 14),
-        revision: new DateTime(2026, 07, 21, 15, 49, 0, DateTimeKind.Utc)
+        revision: new DateTime(2026, 07, 21, 17, 36, 0, DateTimeKind.Utc)
     );
 }

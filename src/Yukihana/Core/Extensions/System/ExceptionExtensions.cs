@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Cosmos.Kernel.Core.IO;
-using Yukihana.Core.Debug;
+using Yukihana.Debug;
 
 namespace Yukihana.Core.Extensions.System;
 
