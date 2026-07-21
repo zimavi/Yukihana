@@ -2,8 +2,8 @@
 // Licensed under the Apache 2.0 License. See LICENSE for details.
 
 using System.Text;
-using Yukihana.Debug;
 using Yukihana.Core.Primitives;
+using Yukihana.Debug;
 
 namespace Yukihana.Security;
 

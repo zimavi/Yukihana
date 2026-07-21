@@ -14,7 +14,7 @@ internal static class LogDispatcher
     public static bool RingBufferEnabled { get; set; } = true;
     public static int RingBufferCapacity => s_ringBuffer.Capacity;
     public static int RingBufferCount => s_ringBuffer.Count;
-    
+
     public static IReadOnlyList<LogSinkRegistration> Sinks => s_sinks;
 
     public static void RegisterSink(

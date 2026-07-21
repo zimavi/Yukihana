@@ -3,9 +3,9 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Yukihana.Debug;
 using Yukihana.Core.Exceptions;
 using Yukihana.Core.Primitives;
+using Yukihana.Debug;
 
 namespace Yukihana.Core.Extensions.Primitives;
 

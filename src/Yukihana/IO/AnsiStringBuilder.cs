@@ -154,23 +154,23 @@ public sealed class AnsiStringBuilder
     {
         return color switch
         {
-            AnsiColor.Black       => 30,
-            AnsiColor.DarkRed     => 31,
-            AnsiColor.DarkGreen   => 32,
-            AnsiColor.DarkYellow  => 33,
-            AnsiColor.DarkBlue    => 34,
+            AnsiColor.Black => 30,
+            AnsiColor.DarkRed => 31,
+            AnsiColor.DarkGreen => 32,
+            AnsiColor.DarkYellow => 33,
+            AnsiColor.DarkBlue => 34,
             AnsiColor.DarkMagenta => 35,
-            AnsiColor.DarkCyan    => 36,
-            AnsiColor.Gray        => 37,
+            AnsiColor.DarkCyan => 36,
+            AnsiColor.Gray => 37,
 
             AnsiColor.DarkGray => 90,
-            AnsiColor.Red      => 91,
-            AnsiColor.Green    => 92,
-            AnsiColor.Yellow   => 93,
-            AnsiColor.Blue     => 94,
-            AnsiColor.Magenta  => 95,
-            AnsiColor.Cyan     => 96,
-            AnsiColor.White    => 97,
+            AnsiColor.Red => 91,
+            AnsiColor.Green => 92,
+            AnsiColor.Yellow => 93,
+            AnsiColor.Blue => 94,
+            AnsiColor.Magenta => 95,
+            AnsiColor.Cyan => 96,
+            AnsiColor.White => 97,
 
             _ => throw new ArgumentOutOfRangeException(nameof(color))
         };
@@ -180,23 +180,23 @@ public sealed class AnsiStringBuilder
     {
         return color switch
         {
-            AnsiColor.Black       => 40,
-            AnsiColor.DarkRed     => 41,
-            AnsiColor.DarkGreen   => 42,
-            AnsiColor.DarkYellow  => 43,
-            AnsiColor.DarkBlue    => 44,
+            AnsiColor.Black => 40,
+            AnsiColor.DarkRed => 41,
+            AnsiColor.DarkGreen => 42,
+            AnsiColor.DarkYellow => 43,
+            AnsiColor.DarkBlue => 44,
             AnsiColor.DarkMagenta => 45,
-            AnsiColor.DarkCyan    => 46,
-            AnsiColor.Gray        => 47,
+            AnsiColor.DarkCyan => 46,
+            AnsiColor.Gray => 47,
 
             AnsiColor.DarkGray => 100,
-            AnsiColor.Red      => 101,
-            AnsiColor.Green    => 102,
-            AnsiColor.Yellow   => 103,
-            AnsiColor.Blue     => 104,
-            AnsiColor.Magenta  => 105,
-            AnsiColor.Cyan     => 106,
-            AnsiColor.White    => 107,
+            AnsiColor.Red => 101,
+            AnsiColor.Green => 102,
+            AnsiColor.Yellow => 103,
+            AnsiColor.Blue => 104,
+            AnsiColor.Magenta => 105,
+            AnsiColor.Cyan => 106,
+            AnsiColor.White => 107,
 
             _ => throw new ArgumentOutOfRangeException(nameof(color))
         };

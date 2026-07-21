@@ -19,7 +19,7 @@ internal sealed class DeltaAnsiFormatter : ILogFormatter
         TimeSpan delta = log.Timestamp - Kernel.BootTime;
 
         _builder.AppendColored($"[{delta.TotalSeconds,10:0.000000}] [", AnsiColor.DarkGray)
-        .AppendColored($"{log.Level.ToString().ToUpperInvariant(),-5}", 
+        .AppendColored($"{log.Level.ToString().ToUpperInvariant(),-5}",
             log.Level == LogLevel.Crit ? AnsiColor.White :
             log.Level == LogLevel.Error ? AnsiColor.Red :
             log.Level == LogLevel.Warn ? AnsiColor.Yellow :
