@@ -19,15 +19,21 @@ internal sealed class BlockDeviceStream(IBlockDevice blockDevice)
     public int Read(ulong position, Span<byte> destination)
     {
         if (position >= _deviceSize)
+        {
             return 0;
+        }
 
         ulong remaining = _deviceSize - position;
 
         if ((ulong)destination.Length > remaining)
+        {
             destination = destination[..(int)remaining];
+        }
 
         if (destination.IsEmpty)
+        {
             return 0;
+        }
 
         int totalRead = destination.Length;
 
@@ -81,15 +87,21 @@ internal sealed class BlockDeviceStream(IBlockDevice blockDevice)
     public int Write(ulong position, ReadOnlySpan<byte> source)
     {
         if (position >= _deviceSize)
+        {
             return 0;
+        }
 
         ulong remaining = _deviceSize - position;
 
         if ((ulong)source.Length > remaining)
+        {
             source = source[..(int)remaining];
+        }
 
         if (source.IsEmpty)
+        {
             return 0;
+        }
 
         int totalWritten = source.Length;
 

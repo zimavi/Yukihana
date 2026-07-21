@@ -25,9 +25,13 @@ internal static class VfsInit
             logger.Info($"Registering fs type '{name}'");
             vfsMan.RegisterFilesystem(name, type);
             if (!VfsManager.RegisterFilesystem(name, type))
+            {
                 logger.Error("Unable to register filesystem!");
+            }
             else
+            {
                 logger.Info("Registered filesystem successfully");
+            }
         }
     }
 }

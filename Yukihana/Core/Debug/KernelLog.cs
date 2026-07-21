@@ -39,10 +39,14 @@ public static class KernelLog
             s_entries.Add(entry);
 
             if (level >= SerialLevel && LogToUart)
+            {
                 Serial.WriteString(FormatForSerial(entry) + "\n");
+            }
 
             if (LogToScreen)
+            {
                 ConsoleRenderer.Render(entry);
+            }
         }
     }
 

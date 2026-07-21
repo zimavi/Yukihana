@@ -19,7 +19,9 @@ public sealed partial class VfsConfigParser
         List<VfsMountConfig> configs = [];
 
         if (string.IsNullOrEmpty(content))
+        {
             return configs;
+        }
 
         string[] lines = content.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
 
@@ -27,11 +29,15 @@ public sealed partial class VfsConfigParser
         {
             string trimmed = line.Trim();
             if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
+            {
                 continue;
+            }
 
             Match match = s_fstabLineRegex.Match(trimmed);
             if (!match.Success)
+            {
                 continue;
+            }
 
             VfsMountConfig config = new()
             {
@@ -86,13 +92,19 @@ public sealed partial class VfsConfigParser
     private static SourceType DetectSourceType(string source)
     {
         if (UuidRegex().IsMatch(source.AsSpan(5)))
+        {
             return SourceType.Uuid;
+        }
 
         if (source.StartsWith("LABEL="))
+        {
             return SourceType.Label;
+        }
 
         if (int.TryParse(source, out _))
+        {
             return SourceType.PartitionIndex;
+        }
 
         return SourceType.Path;
     }

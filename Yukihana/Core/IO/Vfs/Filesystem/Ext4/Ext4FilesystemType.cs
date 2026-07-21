@@ -183,7 +183,9 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
             forceReadOnly = true;
 
             if ((mountFlags & MountFlags.ReadOnly) == 0)
+            {
                 return false;
+            }
         }
 
         if (sb.RoCompatibleFeatures.HasFlag(Ext4SuperblockRoFeatures.ReadOnly))
@@ -193,7 +195,9 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
             forceReadOnly = true;
 
             if ((mountFlags & MountFlags.ReadOnly) == 0)
+            {
                 return false;
+            }
         }
 
         if (sb.RoCompatibleFeatures.HasFlag(Ext4SuperblockRoFeatures.MetadataChecksum) &&

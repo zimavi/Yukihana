@@ -21,7 +21,9 @@ public static partial class EnumerableExtensions
         foreach (Option<T> item in source)
         {
             if (item.IsNone)
+            {
                 return Option<T[]>.None();
+            }
 
             list.Add(item.Value);
         }
@@ -36,7 +38,9 @@ public static partial class EnumerableExtensions
         foreach (Result<T, TError> item in source)
         {
             if (item.IsFailure)
+            {
                 return Result<T[], TError>.Failure(item.Error);
+            }
 
             list.Add(item.Value);
         }
@@ -49,7 +53,9 @@ public static partial class EnumerableExtensions
         foreach (Option<T> item in source)
         {
             if (item.IsSome)
+            {
                 return item;
+            }
         }
 
         return Option<T>.None();

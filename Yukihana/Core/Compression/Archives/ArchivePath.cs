@@ -8,26 +8,37 @@ public static class ArchivePath
     public static string Normalize(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
+        {
             return string.Empty;
+        }
 
         path = path.Replace('\\', '/').Trim();
 
         while (path.StartsWith("./", StringComparison.Ordinal))
+        {
             path = path[2..];
+        }
 
         while (path.StartsWith('/'))
+        {
             path = path[1..];
+        }
 
         var parts = new List<string>();
         foreach (var part in path.Split('/', StringSplitOptions.RemoveEmptyEntries))
         {
             if (part == ".")
+            {
                 continue;
+            }
 
             if (part == "..")
             {
                 if (parts.Count > 0)
+                {
                     parts.RemoveAt(parts.Count - 1);
+                }
+
                 continue;
             }
 
@@ -40,7 +51,9 @@ public static class ArchivePath
     public static string NormalizeLinkTarget(string target)
     {
         if (string.IsNullOrWhiteSpace(target))
+        {
             return string.Empty;
+        }
 
         return target.Replace('\\', '/');
     }

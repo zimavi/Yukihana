@@ -39,7 +39,9 @@ internal sealed class InitfsFileOperations(IBlockDevice blockDevice) : IFileOper
         _logger.Info($"toRead={toRead}");
 
         if (toRead <= 0)
+        {
             return 0;
+        }
 
         long remaining = toRead;
         int destinationOffset = 0;
@@ -106,9 +108,14 @@ internal sealed class InitfsFileOperations(IBlockDevice blockDevice) : IFileOper
             case SeekWhence.End:
                 _logger.Info("SeekWhence=end");
                 if (openFile.Inode is InitfsInode inode)
+                {
                     baseOffset = inode.Size;
+                }
                 else
+                {
                     baseOffset = 0;
+                }
+
                 break;
         }
 

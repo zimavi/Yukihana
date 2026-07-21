@@ -5,7 +5,7 @@ namespace Yukihana.Core.Debug;
 
 public static class UnitManager
 {
-    private static int s_indent = 10;
+    private static readonly int s_indent = 10;
 
     public static Unit Start(string action, string target) =>
         new(action, target, s_indent);

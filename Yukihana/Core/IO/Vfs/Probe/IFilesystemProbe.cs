@@ -8,5 +8,5 @@ namespace Yukihana.Core.IO.Vfs.Probe;
 
 public interface IFilesystemProbe
 {
-    bool TryProbe(Partition device, out FilesystemProbeResult result);
+    public bool TryProbe(Partition device, out FilesystemProbeResult result);
 }

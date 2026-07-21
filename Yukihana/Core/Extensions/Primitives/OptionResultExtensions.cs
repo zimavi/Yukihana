@@ -20,7 +20,9 @@ public static class OptionResultExtensions
             [CallerLineNumber] int callerLineNumber = 0)
         {
             if (option.IsSome)
+            {
                 return option.Value;
+            }
 
             KernelPanic.Panic(
                 string.IsNullOrWhiteSpace(context)
@@ -37,7 +39,9 @@ public static class OptionResultExtensions
             string context)
         {
             if (option.IsSome)
+            {
                 return option.Value;
+            }
 
             string message = string.IsNullOrWhiteSpace(context)
                 ? "Option was None."
@@ -49,7 +53,9 @@ public static class OptionResultExtensions
         public Option<T> OnNone(Action handler)
         {
             if (option.IsNone)
+            {
                 handler();
+            }
 
             return option;
         }
@@ -70,7 +76,9 @@ public static class OptionResultExtensions
             [CallerLineNumber] int callerLineNumber = 0)
         {
             if (result.IsSuccess)
+            {
                 return result.Value;
+            }
 
             string errorText = errorFormatter is not null
                 ? errorFormatter(result.Error)
@@ -94,7 +102,9 @@ public static class OptionResultExtensions
             Func<TError, string>? errorFormatter = null)
         {
             if (result.IsSuccess)
+            {
                 return result.Value;
+            }
 
             string errorText = errorFormatter is not null
                 ? errorFormatter(result.Error)
@@ -110,7 +120,9 @@ public static class OptionResultExtensions
         public Result<TValue, TError> OnFailure(Action<TError> handler)
         {
             if (result.IsFailure)
+            {
                 handler(result.Error);
+            }
 
             return result;
         }

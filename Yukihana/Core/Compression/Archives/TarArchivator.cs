@@ -12,10 +12,14 @@ public sealed class TarArchivator : IArchivator
     public bool CanRead(ReadOnlySpan<byte> data)
     {
         if (data.Length < 512)
+        {
             return false;
+        }
 
         if (TarIsZeroBlock(data[..512]))
+        {
             return true;
+        }
 
         return TarLooksLikeTarHeader(data);
     }
@@ -33,10 +37,14 @@ public sealed class TarArchivator : IArchivator
             ReadOnlySpan<byte> header = data.Slice(offset, 512);
 
             if (TarIsZeroBlock(header))
+            {
                 break;
+            }
 
             if (!TarCheckHeaderChecksum(header))
+            {
                 throw new InvalidDataException($"Invalid TAR checksum at offset {offset}.");
+            }
 
             string name = TarReadString(header, 0, 100);
             int mode = (int)TarReadOctal(header, 100, 8);
@@ -68,7 +76,9 @@ public sealed class TarArchivator : IArchivator
             if (typeFlag == 'L')
             {
                 if (size < 0 || size > int.MaxValue || offset + size > data.Length)
+                {
                     throw new InvalidDataException("Invalid TAR long name entry.");
+                }
 
                 pendingName = ArchivePath.Normalize(TarReadString(data.Slice(offset, (int)size), 0, (int)size).TrimEnd('\0'));
                 offset = ArchivePath.Align(offset + (int)size, 512);
@@ -78,7 +88,9 @@ public sealed class TarArchivator : IArchivator
             if (typeFlag == 'K')
             {
                 if (size < 0 || size > int.MaxValue || offset + size > data.Length)
+                {
                     throw new InvalidDataException("Invalid TAR long link entry.");
+                }
 
                 pendingLinkName = ArchivePath.Normalize(TarReadString(data.Slice(offset, (int)size), 0, (int)size).TrimEnd('\0'));
                 offset = ArchivePath.Align(offset + (int)size, 512);
@@ -92,7 +104,9 @@ public sealed class TarArchivator : IArchivator
             }
 
             if (size < 0 || size > int.MaxValue || offset + size > data.Length)
+            {
                 throw new InvalidDataException($"Truncated TAR payload for '{fullPath}'.");
+            }
 
             byte[] payload = size == 0 ? Array.Empty<byte>() : ArchivePath.CopyBytes(data, offset, (int)size);
             ArchiveEntry entry = typeFlag switch
@@ -150,7 +164,9 @@ public sealed class TarArchivator : IArchivator
     public byte[] Write(ArchiveImage image)
     {
         if (image is null)
+        {
             throw new ArgumentNullException(nameof(image));
+        }
 
         using var ms = new MemoryStream();
 
@@ -213,11 +229,15 @@ public sealed class TarArchivator : IArchivator
         TarWriteString(header, 345, 155, prefix);
 
         for (int i = 148; i < 156; i++)
+        {
             header[i] = (byte)' ';
+        }
 
         long checksum = 0;
         for (int i = 0; i < header.Length; i++)
+        {
             checksum += header[i];
+        }
 
         TarWriteChecksum(header, 148, 8, checksum);
         output.Write(header, 0, header.Length);
@@ -227,18 +247,24 @@ public sealed class TarArchivator : IArchivator
             output.Write(payload, 0, payload.Length);
             int pad = ArchivePath.Align(payload.Length, 512) - payload.Length;
             if (pad > 0)
+            {
                 output.Write(new byte[pad], 0, pad);
+            }
         }
     }
 
     private static bool TarLooksLikeTarHeader(ReadOnlySpan<byte> header)
     {
         if (header.Length < 512)
+        {
             return false;
+        }
 
         string magic = TarReadString(header, 257, 6);
         if (magic.StartsWith("ustar", StringComparison.Ordinal))
+        {
             return TarCheckHeaderChecksum(header.Slice(0, 512));
+        }
 
         return TarCheckHeaderChecksum(header.Slice(0, 512));
     }
@@ -246,13 +272,17 @@ public sealed class TarArchivator : IArchivator
     private static bool TarCheckHeaderChecksum(ReadOnlySpan<byte> header)
     {
         if (header.Length < 512)
+        {
             return false;
+        }
 
         long stored = TarReadOctal(header, 148, 8);
 
         long computed = 0;
         for (int i = 0; i < 512; i++)
+        {
             computed += (i >= 148 && i < 156) ? 32 : header[i];
+        }
 
         return stored == computed;
     }
@@ -262,7 +292,9 @@ public sealed class TarArchivator : IArchivator
         for (int i = 0; i < block.Length; i++)
         {
             if (block[i] != 0)
+            {
                 return false;
+            }
         }
 
         return true;
@@ -276,7 +308,9 @@ public sealed class TarArchivator : IArchivator
 
         int end = offset + length;
         while (end > offset && buffer[end - 1] == 0)
+        {
             end--;
+        }
 
         return Encoding.ASCII.GetString(buffer[offset..end]);
     }
@@ -292,10 +326,14 @@ public sealed class TarArchivator : IArchivator
         {
             byte b = buffer[offset + i];
             if (b == 0 || b == (byte)' ')
+            {
                 continue;
+            }
 
             if (b < (byte)'0' || b > (byte)'7')
+            {
                 break;
+            }
 
             value = (value << 3) + (b - (byte)'0');
         }
@@ -309,24 +347,34 @@ public sealed class TarArchivator : IArchivator
         int count = Math.Min(length, bytes.Length);
         Array.Copy(bytes, 0, buffer, offset, count);
         for (int i = count; i < length; i++)
+        {
             buffer[offset + i] = 0;
+        }
     }
 
     private static void TarWriteOctal(byte[] buffer, int offset, int length, long value)
     {
         if (length <= 0)
+        {
             return;
+        }
 
         string oct = Convert.ToString(value, 8) ?? "0";
         if (oct.Length + 1 > length)
+        {
             throw new InvalidDataException($"Value {value} does not fit in octal field of size {length}.");
+        }
 
         int pad = length - oct.Length - 1;
         for (int i = 0; i < pad; i++)
+        {
             buffer[offset + i] = (byte)'0';
+        }
 
         for (int i = 0; i < oct.Length; i++)
+        {
             buffer[offset + pad + i] = (byte)oct[i];
+        }
 
         buffer[offset + length - 1] = 0;
     }
@@ -335,14 +383,20 @@ public sealed class TarArchivator : IArchivator
     {
         string oct = Convert.ToString(checksum, 8) ?? "0";
         if (oct.Length + 1 > length)
+        {
             throw new InvalidDataException("Checksum does not fit into TAR field.");
+        }
 
         int pad = length - oct.Length - 2;
         for (int i = 0; i < pad; i++)
+        {
             buffer[offset + i] = (byte)'0';
+        }
 
         for (int i = 0; i < oct.Length; i++)
+        {
             buffer[offset + pad + i] = (byte)oct[i];
+        }
 
         buffer[offset + length - 1] = (byte)' ';
     }

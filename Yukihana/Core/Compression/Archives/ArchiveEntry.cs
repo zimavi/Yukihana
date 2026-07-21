@@ -24,7 +24,9 @@ public sealed class ArchiveEntry
     public Stream OpenRead()
     {
         if (Kind == ArchiveEntryKind.SymbolicLink && LinkTarget is not null)
+        {
             return new MemoryStream(Encoding.UTF8.GetBytes(LinkTarget), writable: false);
+        }
 
         return new MemoryStream(Data ?? [], writable: false);
     }

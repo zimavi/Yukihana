@@ -19,7 +19,9 @@ public static class ArchivatorFactory
         foreach (IArchivator archivator in s_archivators)
         {
             if (archivator.CanRead(data))
+            {
                 return Option<IArchivator>.Some(archivator);
+            }
         }
 
         return Option<IArchivator>.None();

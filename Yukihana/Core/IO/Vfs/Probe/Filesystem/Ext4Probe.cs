@@ -23,7 +23,9 @@ public sealed class Ext4Probe : IFilesystemProbe
         // Validate magic before parsing, to avoid enum exceptions
         ushort magic = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(56, 2));
         if (magic != Ext4SuperblockBase.EXT4_SUPERBLOCK_MAGIC)
+        {
             return false;
+        }
 
         Ext4SuperblockBase superblockBase = MemoryMarshal.Read<Ext4SuperblockBase>(buffer);
 

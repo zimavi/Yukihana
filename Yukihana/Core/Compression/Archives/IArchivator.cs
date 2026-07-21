@@ -5,8 +5,8 @@ namespace Yukihana.Core.Compression.Archives;
 
 public interface IArchivator
 {
-    ArchiveKind Kind { get; }
-    bool CanRead(ReadOnlySpan<byte> data);
-    ArchiveImage Read(ReadOnlySpan<byte> data);
-    byte[] Write(ArchiveImage image);
+    public ArchiveKind Kind { get; }
+    public bool CanRead(ReadOnlySpan<byte> data);
+    public ArchiveImage Read(ReadOnlySpan<byte> data);
+    public byte[] Write(ArchiveImage image);
 }

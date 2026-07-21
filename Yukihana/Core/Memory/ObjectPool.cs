@@ -26,7 +26,9 @@ public sealed class ObjectPool<T> where T : class
     public T Rent()
     {
         if (Count == 0)
+        {
             return _factory();
+        }
 
         int idx = --Count;
 
@@ -43,7 +45,9 @@ public sealed class ObjectPool<T> where T : class
         _reset?.Invoke(obj);
 
         if (Count < _items.Length)
+        {
             _items[Count++] = obj;
+        }
     }
 
     public void Clear(bool resetItems = false)
@@ -51,7 +55,9 @@ public sealed class ObjectPool<T> where T : class
         if (resetItems && _reset is not null)
         {
             for (int i = 0; i < Count; i++)
+            {
                 _reset(_items[i]!);
+            }
         }
 
         Array.Clear(_items, 0, Count);
@@ -63,7 +69,9 @@ public sealed class ObjectPool<T> where T : class
         int toCreate = Math.Min(count, _items.Length - Count);
 
         for (int i = 0; i < toCreate; i++)
+        {
             _items[Count++] = _factory();
+        }
     }
 
     public bool TryRent(out T? value)

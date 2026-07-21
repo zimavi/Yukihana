@@ -1,6 +1,7 @@
 <Project Sdk="Cosmos.Sdk/3.0.76">
   <PropertyGroup>
-    
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
 
     <CosmosKernelClass>Yukihana.Kernel</CosmosKernelClass>
     <OutputType>Exe</OutputType>

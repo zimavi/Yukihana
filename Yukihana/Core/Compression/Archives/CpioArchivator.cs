@@ -12,7 +12,9 @@ public sealed class CpioArchivator : IArchivator
     public bool CanRead(ReadOnlySpan<byte> data)
     {
         if (data.Length < 6)
+        {
             return false;
+        }
 
         string magic = Encoding.ASCII.GetString(data.Slice(0, 6));
         return magic is "070701" or "070702" or "070707";
@@ -34,19 +36,27 @@ public sealed class CpioArchivator : IArchivator
             {
                 bool crc = magic == "070702";
                 if (!ReadNewcOrCrc(data, ref offset, crc, image, hardLinkTargets, hardLinkData))
+                {
                     break;
+                }
+
                 continue;
             }
 
             if (magic == "070707")
             {
                 if (!ReadOdc(data, ref offset, image, hardLinkTargets, hardLinkData))
+                {
                     break;
+                }
+
                 continue;
             }
 
             if (CpioIsAllZero(data.Slice(offset)))
+            {
                 break;
+            }
 
             throw new InvalidDataException($"Unknown CPIO magic '{magic}' at offset {offset}.");
         }
@@ -88,7 +98,9 @@ public sealed class CpioArchivator : IArchivator
         const int headerSize = 110;
 
         if (offset + headerSize > data.Length)
+        {
             throw new InvalidDataException("Truncated CPIO newc/crc header.");
+        }
 
         int p = offset + 6;
 
@@ -109,19 +121,27 @@ public sealed class CpioArchivator : IArchivator
         offset += headerSize;
 
         if (nameSize <= 0 || nameSize > int.MaxValue)
+        {
             throw new InvalidDataException($"Invalid CPIO filename size: {nameSize}.");
+        }
 
         if (offset + nameSize > data.Length)
+        {
             throw new InvalidDataException("Truncated CPIO filename.");
+        }
 
         string name = CpioReadAscii(data, offset, (int)nameSize).TrimEnd('\0');
         offset = ArchivePath.Align(offset + (int)nameSize, 4);
 
         if (name == "TRAILER!!!")
+        {
             return false;
+        }
 
         if (fileSize < 0 || fileSize > int.MaxValue || offset + fileSize > data.Length)
+        {
             throw new InvalidDataException($"Truncated CPIO payload for '{name}'.");
+        }
 
         byte[] payload = fileSize == 0 ? [] : ArchivePath.CopyBytes(data, offset, (int)fileSize);
 
@@ -129,10 +149,14 @@ public sealed class CpioArchivator : IArchivator
         {
             uint sum = 0;
             for (int i = 0; i < payload.Length; i++)
+            {
                 sum += payload[i];
+            }
 
             if (sum != check)
+            {
                 throw new InvalidDataException($"CPIO checksum mismatch for '{name}'.");
+            }
         }
 
         offset = ArchivePath.Align(offset + (int)fileSize, 4);
@@ -237,7 +261,9 @@ public sealed class CpioArchivator : IArchivator
         const int headerSize = 76;
 
         if (offset + headerSize > data.Length)
+        {
             throw new InvalidDataException("Truncated CPIO odc header.");
+        }
 
         int p = offset + 6;
 
@@ -255,19 +281,27 @@ public sealed class CpioArchivator : IArchivator
         offset += headerSize;
 
         if (nameSize <= 0 || nameSize > int.MaxValue)
+        {
             throw new InvalidDataException($"Invalid CPIO filename size: {nameSize}.");
+        }
 
         if (offset + nameSize > data.Length)
+        {
             throw new InvalidDataException("Truncated CPIO filename.");
+        }
 
         string name = CpioReadAscii(data, offset, (int)nameSize).TrimEnd('\0');
         offset = ArchivePath.Align(offset + (int)nameSize, 2);
 
         if (name == "TRAILER!!!")
+        {
             return false;
+        }
 
         if (fileSize < 0 || fileSize > int.MaxValue || offset + fileSize > data.Length)
+        {
             throw new InvalidDataException($"Truncated CPIO payload for '{name}'.");
+        }
 
         byte[] payload = fileSize == 0 ? [] : ArchivePath.CopyBytes(data, offset, (int)fileSize);
         offset = ArchivePath.Align(offset + (int)fileSize, 2);
@@ -413,7 +447,9 @@ public sealed class CpioArchivator : IArchivator
         if (entry.Kind == ArchiveEntryKind.File && entry.HardLinkKey is not null)
         {
             if (!writtenRoots.Contains(entry.HardLinkKey))
+            {
                 writtenRoots.Add(entry.HardLinkKey);
+            }
         }
 
         byte[] header = new byte[110];
@@ -442,14 +478,18 @@ public sealed class CpioArchivator : IArchivator
 
         int namePad = ArchivePath.Align(nameBytes.Length + 1, 4) - (nameBytes.Length + 1);
         if (namePad > 0)
+        {
             output.Write(new byte[namePad], 0, namePad);
+        }
 
         if (payload.Length > 0)
         {
             output.Write(payload, 0, payload.Length);
             int pad = ArchivePath.Align(payload.Length, 4) - payload.Length;
             if (pad > 0)
+            {
                 output.Write(new byte[pad], 0, pad);
+            }
         }
     }
 
@@ -460,7 +500,9 @@ public sealed class CpioArchivator : IArchivator
 
         CpioWriteAscii(header, 0, 6, "070701");
         for (int i = 6; i < 110; i += 8)
+        {
             CpioWriteHex(header, i, 8, 0);
+        }
 
         CpioWriteHex(header, 94, 8, 11);
 
@@ -472,7 +514,9 @@ public sealed class CpioArchivator : IArchivator
 
         int pad = ArchivePath.Align(trailerName.Length + 1, 4) - (trailerName.Length + 1);
         if (pad > 0)
+        {
             output.Write(new byte[pad], 0, pad);
+        }
     }
 
     private static string CpioReadAscii(ReadOnlySpan<byte> buffer, int offset, int count)
@@ -488,23 +532,35 @@ public sealed class CpioArchivator : IArchivator
         {
             byte b = buffer[offset + i];
             if (b == 0 || b == (byte)' ')
+            {
                 continue;
+            }
 
             uint digit;
             if (b >= (byte)'0' && b <= (byte)'9')
+            {
                 digit = (uint)(b - (byte)'0');
+            }
             else if (b >= (byte)'a' && b <= (byte)'f')
+            {
                 digit = (uint)(10 + (b - (byte)'a'));
+            }
             else if (b >= (byte)'A' && b <= (byte)'F')
+            {
                 digit = (uint)(10 + (b - (byte)'A'));
+            }
             else
+            {
                 throw new InvalidDataException($"Invalid hex digit '{(char)b}' in CPIO header.");
+            }
 
             value = (value << 4) | digit;
         }
 
         if (value > uint.MaxValue)
+        {
             throw new InvalidDataException("CPIO field exceeds UInt32.");
+        }
 
         return (uint)value;
     }
@@ -517,16 +573,22 @@ public sealed class CpioArchivator : IArchivator
         {
             byte b = buffer[offset + i];
             if (b == 0 || b == (byte)' ')
+            {
                 continue;
+            }
 
             if (b < (byte)'0' || b > (byte)'7')
+            {
                 throw new InvalidDataException($"Invalid octal digit '{(char)b}' in CPIO header.");
+            }
 
             value = (value << 3) | (uint)(b - (byte)'0');
         }
 
         if (value > uint.MaxValue)
+        {
             throw new InvalidDataException("CPIO field exceeds UInt32.");
+        }
 
         return (uint)value;
     }
@@ -536,7 +598,9 @@ public sealed class CpioArchivator : IArchivator
         for (int i = 0; i < buffer.Length; i++)
         {
             if (buffer[i] != 0)
+            {
                 return false;
+            }
         }
 
         return true;
@@ -554,14 +618,20 @@ public sealed class CpioArchivator : IArchivator
     {
         string hex = value.ToString("X");
         if (hex.Length > length)
+        {
             throw new InvalidDataException($"Value {value} does not fit in CPIO field of size {length}.");
+        }
 
         int pad = length - hex.Length;
         for (int i = 0; i < pad; i++)
+        {
             buffer[offset + i] = (byte)'0';
+        }
 
         for (int i = 0; i < hex.Length; i++)
+        {
             buffer[offset + pad + i] = (byte)hex[i];
+        }
     }
 
     private static void TarLikeFill(byte[] buffer, byte value)

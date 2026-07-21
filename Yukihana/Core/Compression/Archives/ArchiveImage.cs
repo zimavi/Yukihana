@@ -20,6 +20,8 @@ public sealed class ArchiveImage
     public void AddRange(IEnumerable<ArchiveEntry> entries)
     {
         foreach (var entry in entries)
+        {
             Add(entry);
+        }
     }
 }

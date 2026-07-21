@@ -14,10 +14,14 @@ public sealed class AuthService(IUserStore store)
         Option<User> user = _store.GetUserByName(username);
 
         if (user.IsNone)
+        {
             return Option<User>.None();
+        }
 
         if (!PasswordHasher.Verify(password, user.Value.PasswordHash))
+        {
             return Option<User>.None();
+        }
 
         return user.Value;
     }

@@ -19,7 +19,9 @@ public static class KernelPanic
         [CallerLineNumber] int l = 0)
     {
         if (Interlocked.Exchange(ref s_panicEntered, 1) != 0)
+        {
             MinimalFailSafePanic("Recursive panic detected.");
+        }
 
         PlatformHAL.CpuOps?.DisableInterrupts();
 
@@ -32,7 +34,10 @@ public static class KernelPanic
 
         PlatformHAL.CpuOps?.Halt();
 
-        for (; ; );
+        for (; ; )
+        {
+            ;
+        }
     }
 
     private static void ThreadLockedPanic(string reason, string m, string f, int l)
@@ -69,7 +74,9 @@ public static class KernelPanic
         Serial.WriteString("\n");
 
         while (true)
+        {
             PlatformHAL.CpuOps?.Halt();
+        }
     }
 
     private static void Print(string text, ConsoleColor color)

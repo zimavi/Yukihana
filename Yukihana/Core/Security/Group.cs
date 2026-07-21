@@ -18,7 +18,9 @@ public sealed class Group(int id, string name)
     public void AddMembers(IEnumerable<int> userIds)
     {
         foreach (int userId in userIds)
+        {
             _members.Add(userId);
+        }
     }
 
     public void RemoveMember(int userId) => _members.Remove(userId);

@@ -7,15 +7,15 @@ namespace Yukihana.Core.Security;
 
 public interface IUserStore
 {
-    Option<User> GetUserById(int id);
-    Option<User> GetUserByName(string name);
+    public Option<User> GetUserById(int id);
+    public Option<User> GetUserByName(string name);
 
-    Option<Group> GetGroupById(int id);
-    Option<Group> GetGroupByName(string name);
+    public Option<Group> GetGroupById(int id);
+    public Option<Group> GetGroupByName(string name);
 
-    IEnumerable<User> GetAllUsers();
-    IEnumerable<Group> GetAllGroups();
+    public IEnumerable<User> GetAllUsers();
+    public IEnumerable<Group> GetAllGroups();
 
-    void AddUser(User user);
-    void AddGroup(Group group);
+    public void AddUser(User user);
+    public void AddGroup(Group group);
 }

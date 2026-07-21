@@ -31,7 +31,9 @@ public sealed class FatProbe : IFilesystemProbe
 
         Console.WriteLine("Parsing sector");
         if (!FatBootSector.TryParse(sector, out FatBootSector? boot))
+        {
             return false;
+        }
 
         bool isFat32 = boot!.Type == FatType.Fat32;
 
@@ -80,18 +82,24 @@ public sealed class FatProbe : IFilesystemProbe
 
         // Add partition start sector
         if (part.StartSector > 0)
+        {
             data.AddRange(BitConverter.GetBytes(part.StartSector));
+        }
 
         // Add partition size in sectors
         if (part.BlockCount > 0)
+        {
             data.AddRange(BitConverter.GetBytes(part.BlockCount));
+        }
 
         // Add serial numver
         data.AddRange(BitConverter.GetBytes(serial));
 
         // Add label
         if (!string.IsNullOrEmpty(label))
+        {
             data.AddRange(Encoding.ASCII.GetBytes(label));
+        }
 
         // Add filesystem type (FAT 12/16/32)
         data.Add((byte)fatType);

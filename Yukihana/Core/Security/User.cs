@@ -39,7 +39,9 @@ public record User(
         foreach (int groupId in SecondaryGroupIds)
         {
             if (groupId != PrimaryGroupId)
+            {
                 yield return groupId;
+            }
         }
     }
 

@@ -63,13 +63,17 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
     public void Dispose()
     {
         if (IsSome)
+        {
             DisposeIfNeeded(_value);
+        }
     }
 
     private static void DisposeIfNeeded(T? value)
     {
         if (value is IDisposable disposable)
+        {
             disposable.Dispose();
+        }
     }
 
     #endregion
@@ -145,10 +149,14 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
     public bool Equals(Option<T> other)
     {
         if (IsSome != other.IsSome)
+        {
             return false;
+        }
 
         if (IsNone)
+        {
             return true;
+        }
 
         return EqualityComparer<T>.Default.Equals(_value, other._value);
     }
@@ -162,7 +170,9 @@ public readonly struct Option<T> : IEquatable<Option<T>>, IEnumerable<T>, IDispo
     public IEnumerator<T> GetEnumerator()
     {
         if (IsSome)
+        {
             yield return _value!;
+        }
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

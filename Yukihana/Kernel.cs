@@ -4,7 +4,6 @@
 using System.Data;
 using System.Reflection;
 using Cosmos.Kernel.HAL.Vfs;
-using Cosmos.Kernel.System.Filesystems.Fat;
 using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Cosmos.Kernel.System.Storage;
@@ -20,7 +19,6 @@ using Yukihana.Core.IO.Vfs;
 using Yukihana.Core.IO.Vfs.Config;
 using Yukihana.Core.IO.Vfs.Device;
 using Yukihana.Core.IO.Vfs.Filesystem.InitFs;
-using Yukihana.Core.IO.Vfs.Probe;
 using Yukihana.Core.Primitives;
 using Yukihana.Core.Resources;
 using Yukihana.Core.Security;
@@ -28,7 +26,7 @@ using Sys = Cosmos.Kernel.System;
 
 namespace Yukihana;
 
-public class Kernel : Sys.Kernel
+public sealed class Kernel : Sys.Kernel
 {
     public static AuthService AuthService { get; private set; } = null!;
     public static UserSession UserSession { get; private set; } = null!;
@@ -92,14 +90,18 @@ public class Kernel : Sys.Kernel
                 ramfsBytes = memStream.ToArray();
             }
             else
+            {
                 logger.Warn("No initramfs archive provided.");
+            }
         }
 
         logger.Info($"Discovered {StorageManager.Partitions.Count} partitions");
 
         ArchiveImage? ramfsImage = null;
         if (ramfsBytes is not null)
+        {
             ramfsImage = LoadInitRamFs(ramfsBytes, logger); // This throws if cannot read
+        }
 
         if (ramfsImage is not null)
         {
@@ -107,16 +109,24 @@ public class Kernel : Sys.Kernel
             InitfsFilesystemType initfsType = new(ramfsDisk, ramfsImage);
 
             if (VfsManager.RegisterFilesystem("initfs", initfsType))
+            {
                 logger.Info("Registered initfs");
+            }
             else
+            {
                 KernelPanic.Panic("Failed to register initfs");
+            }
 
             logger.Info("Trying to mount initfs as root");
 
             if (VfsManager.TryMount("initfs", "", MountFlags.ReadOnly, "/", out _))
+            {
                 logger.Info("Mounted initfs as '/'");
+            }
             else
+            {
                 KernelPanic.Panic("Failed to mount initfs as '/'");
+            }
         }
 
         var fontGroup = new OptionalResourceGroup<FontState>(
@@ -149,14 +159,20 @@ public class Kernel : Sys.Kernel
 
             logger.Info("Unmounting initfs");
             if (!VfsManager.TryUnmount("/"))
+            {
                 logger.Error("Failed to unmount initfs");
+            }
             else
+            {
                 logger.Info("Unmounted initfs");
+            }
 
             s_vfsMan.TryMountAll(out _);
         }
         else
+        {
             logger.Error("Unable to locate fstab! No filesystem will be mounted");
+        }
 
         /*
         logger.Warn("Mounting /tmp as FAT 16, bypassing fstab");
@@ -210,7 +226,9 @@ public class Kernel : Sys.Kernel
         archivator = ArchivatorFactory.Detect(decompressed);
 
         if (archivator.IsNone)
+        {
             throw new DataException("initramfs image is not supported");
+        }
 
         return archivator.Value.Read(decompressed);
     }

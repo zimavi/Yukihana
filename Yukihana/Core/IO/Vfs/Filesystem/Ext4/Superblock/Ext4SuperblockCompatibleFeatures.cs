@@ -4,7 +4,7 @@
 namespace Yukihana.Core.IO.Vfs.Filesystem.Ext4.Superblock;
 
 [Flags]
-enum Ext4SuperblockCompatibleFeatures : uint
+internal enum Ext4SuperblockCompatibleFeatures : uint
 {
     // Directory preallocation
     DirPrealloc = 0x1,

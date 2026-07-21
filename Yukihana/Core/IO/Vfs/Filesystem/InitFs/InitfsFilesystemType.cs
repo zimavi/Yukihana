@@ -34,11 +34,15 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
         superblock = null;
 
         if (_blockDevice is null || _blockDevice.BlockSize == 0 || _blockDevice.BlockCount == 0)
+        {
             return false;
+        }
 
         InitfsInode? rootInode = LoadArchiveData();
         if (rootInode is null)
+        {
             return false;
+        }
 
         // Write Magic to blockdevice
         Span<byte> buffer = stackalloc byte[(int)_blockSize];
@@ -77,15 +81,21 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
             logger.Info($"Processing entry '{entry.Path}'");
 
             if (string.IsNullOrEmpty(entry.Path))
+            {
                 continue;
+            }
 
             string path = entry.Path;
             if (path.StartsWith('/'))
+            {
                 path = path.Substring(1);
+            }
 
             string[] parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
+            {
                 continue;
+            }
 
             string currentPath = "";
             InitfsInode parent = root;
@@ -146,7 +156,9 @@ internal sealed class InitfsFilesystemType : IVfsFilesystemType
                 ulong requiredBlocks = (fileSize + _blockSize - 1) / _blockSize;
 
                 if (usedBlocks + requiredBlocks > maxBlocks)
+                {
                     continue;
+                }
 
                 byte[] buffer = new byte[requiredBlocks * _blockSize];
                 Array.Copy(entry.Data, 0, buffer, 0, (long)fileSize);

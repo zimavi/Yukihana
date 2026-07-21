@@ -86,8 +86,10 @@ public static class IdentitySerializer
             foreach (int userId in members.OrderBy(id => id))
             {
                 if (!usersById.TryGetValue(userId, out string? userName))
+                {
                     throw new InvalidOperationException(
                         $"Group '{group.Name}' references unknown user id '{userId}'.");
+                }
 
                 namesSet.Add(userName);
             }
@@ -154,7 +156,9 @@ public static class IdentitySerializer
             store.AddGroup(group);
 
             if (string.IsNullOrWhiteSpace(membersField))
+            {
                 continue;
+            }
 
             foreach (string memberName in membersField.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
@@ -213,10 +217,14 @@ public static class IdentitySerializer
             string line = rawLine.Trim();
 
             if (line.Length == 0)
+            {
                 continue;
+            }
 
             if (line.StartsWith('#'))
+            {
                 continue;
+            }
 
             yield return line;
         }
@@ -238,7 +246,9 @@ public static class IdentitySerializer
     private static int ParseInt(string value, string fieldName, string sourceLine)
     {
         if (!int.TryParse(value, out var result))
+        {
             throw new FormatException($"Invalid {fieldName} value '{value}' in line: '{sourceLine}'.");
+        }
 
         return result;
     }
@@ -256,9 +266,13 @@ public static class IdentitySerializer
     private static void ValidateField(string value, string fieldName, bool allowEmpty = false, params char[] forbidden)
     {
         if (!allowEmpty && string.IsNullOrWhiteSpace(value))
+        {
             throw new ArgumentException($"{fieldName} cannot be empty.", fieldName);
+        }
 
         if (value.Any(ch => forbidden.Contains(ch)))
+        {
             throw new ArgumentException($"{fieldName} contains invalid characters.", fieldName);
+        }
     }
 }

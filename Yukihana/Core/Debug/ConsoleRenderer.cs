@@ -9,12 +9,19 @@ public static class ConsoleRenderer
 
     public static void Render(LogEntry entry)
     {
-        if (!Enabled) return;
+        if (!Enabled)
+        {
+            return;
+        }
 
         if (BootEnvironment.Stage == BootStage.CoreInit)
+        {
             RenderSystemd(entry);
+        }
         else
+        {
             RenderKernel(entry);
+        }
     }
 
     private static void RenderKernel(LogEntry e)
@@ -40,9 +47,14 @@ public static class ConsoleRenderer
     {
         Console.ForegroundColor = ConsoleColor.White;
         if (string.IsNullOrWhiteSpace(e.Source))
+        {
             Console.WriteLine($"          {e.Message}");
+        }
         else
+        {
             Console.WriteLine($"          {e.Source}: {e.Message}");
+        }
+
         Console.ResetColor();
     }
 

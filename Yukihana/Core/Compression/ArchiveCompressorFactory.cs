@@ -19,7 +19,9 @@ public static class ArchiveCompressorFactory
         foreach (IArchiveCompressor compressor in compressors)
         {
             if (compressor.IsSupportedFormat(data))
+            {
                 return Option<IArchiveCompressor>.Some(compressor);
+            }
         }
 
         return Option<IArchiveCompressor>.None();

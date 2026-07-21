@@ -15,7 +15,9 @@ public sealed class CompositeResourceProvider(params IResourceProvider[] provide
         {
             Option<byte[]> result = provider.TryLoad(relativePath);
             if (result.IsSome)
+            {
                 return result;
+            }
         }
 
         return Option<byte[]>.None();

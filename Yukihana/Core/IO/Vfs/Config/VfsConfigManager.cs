@@ -48,7 +48,9 @@ public sealed class VfsConfigManager
                 mountedFilesystems.Add(mount!);
             }
             else
+            {
                 _logger.Error($"Unable to mount '{config.Source}' at '{config.MountPoint}'");
+            }
         }
 
         return true;
@@ -109,7 +111,9 @@ public sealed class VfsConfigManager
                 _logger.Warn("Source type is partition index. This is unrealiable way to identify drives, unless there is only one present.");
 
                 if (int.TryParse(config.Source, out int idx))
+                {
                     return ResolveByPartitionIndex(idx);
+                }
 
                 return string.Empty;
 
@@ -149,7 +153,9 @@ public sealed class VfsConfigManager
             Partition part = partitions[i];
 
             if (!FilesystemProber.ProbeFilesystem(part, out FilesystemProbeResult result))
+            {
                 continue;
+            }
 
             if (result.Uuid == guid)
             {
@@ -178,7 +184,9 @@ public sealed class VfsConfigManager
     public VfsManager.VfsMount? Mount(string filesystemType, string source, MountFlags flags, string mountPoint)
     {
         if (VfsManager.TryMount(filesystemType, source, flags, mountPoint, out VfsManager.VfsMount? mount))
+        {
             return mount;
+        }
 
         return null;
     }

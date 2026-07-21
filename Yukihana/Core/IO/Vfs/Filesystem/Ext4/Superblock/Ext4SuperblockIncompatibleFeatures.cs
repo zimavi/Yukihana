@@ -4,7 +4,7 @@
 namespace Yukihana.Core.IO.Vfs.Filesystem.Ext4.Superblock;
 
 [Flags]
-enum Ext4SuperblockIncompatibleFeatures : uint
+internal enum Ext4SuperblockIncompatibleFeatures : uint
 {
     Compression = 0x1,
 

@@ -30,7 +30,9 @@ public static partial class OptionExtensions
         public Option<T> OnSome(Action<T> action)
         {
             if (option.IsSome)
+            {
                 action(option.Value);
+            }
 
             return option;
         }
@@ -57,7 +59,9 @@ public static partial class OptionExtensions
         public IEnumerable<T> AsEnumerable()
         {
             if (option.IsSome)
+            {
                 yield return option.Value;
+            }
         }
     }
 }

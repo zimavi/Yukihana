@@ -46,9 +46,13 @@ public static partial class ResultExtensions
         public Result<TValue, TError> TapBoth(Action<TValue> success, Action<TError> failure)
         {
             if (result.IsSuccess)
+            {
                 success(result.Value);
+            }
             else
+            {
                 failure(result.Error);
+            }
 
             return result;
         }

@@ -7,5 +7,5 @@ namespace Yukihana.Core.IO.Loaders;
 
 public interface IResourceProvider
 {
-    Option<byte[]> TryLoad(string relativePath);
+    public Option<byte[]> TryLoad(string relativePath);
 }

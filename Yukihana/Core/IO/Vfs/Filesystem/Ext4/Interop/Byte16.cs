@@ -29,7 +29,9 @@ public struct Byte16
 
         int len = span.IndexOf((byte)0);
         if (len < 0)
+        {
             len = span.Length;
+        }
 
         return Encoding.ASCII.GetString(span[..len]);
     }
@@ -45,6 +47,8 @@ public struct Byte16
             span);
 
         if (written < span.Length)
+        {
             span[written] = 0;
+        }
     }
 }

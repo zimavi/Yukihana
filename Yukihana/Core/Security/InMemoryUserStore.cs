@@ -16,26 +16,38 @@ public sealed class InMemoryUserStore : IUserStore
     public Option<User> GetUserById(int id)
     {
         if (_usersById.TryGetValue(id, out User? user))
+        {
             return user;
+        }
+
         return Option<User>.None();
     }
     public Option<User> GetUserByName(string name)
     {
         if (_usersByName.TryGetValue(name, out User? user))
+        {
             return user;
+        }
+
         return Option<User>.None();
     }
 
     public Option<Group> GetGroupById(int id)
     {
         if (_groupsById.TryGetValue(id, out Group? group))
+        {
             return group;
+        }
+
         return Option<Group>.None();
     }
     public Option<Group> GetGroupByName(string name)
     {
         if (_groupsByName.TryGetValue(name, out Group? group))
+        {
             return group;
+        }
+
         return Option<Group>.None();
     }
 
@@ -59,7 +71,9 @@ public sealed class InMemoryUserStore : IUserStore
     public void AddGroup(Group group)
     {
         if (_groupsById.TryGetValue(group.Id, out Group? existing))
+        {
             _groupsByName.Remove(existing.Name);
+        }
 
         _groupsById[group.Id] = group;
         _groupsByName[group.Name] = group;
@@ -70,24 +84,32 @@ public sealed class InMemoryUserStore : IUserStore
     private void AddUserToAllKnownGroups(User user)
     {
         if (_groupsById.TryGetValue(user.PrimaryGroupId, out Group? primaryGroup))
+        {
             primaryGroup.AddMember(user.Id);
+        }
 
         foreach (int secondaryGroupId in user.SecondaryGroupIds.Distinct())
         {
             if (_groupsById.TryGetValue(secondaryGroupId, out Group? group))
+            {
                 group.AddMember(user.Id);
+            }
         }
     }
 
     private void RemoveUserFromAllGroups(User user)
     {
         if (_groupsById.TryGetValue(user.PrimaryGroupId, out Group? primaryGroup))
+        {
             primaryGroup.RemoveMember(user.Id);
+        }
 
         foreach (int secondaryGroupId in user.SecondaryGroupIds.Distinct())
         {
             if (_groupsById.TryGetValue(secondaryGroupId, out Group? group))
+            {
                 group.RemoveMember(user.Id);
+            }
         }
     }
 
@@ -96,7 +118,9 @@ public sealed class InMemoryUserStore : IUserStore
         foreach (User user in _usersById.Values)
         {
             if (user.PrimaryGroupId == group.Id || user.SecondaryGroupIds.Contains(group.Id))
+            {
                 group.AddMember(user.Id);
+            }
         }
     }
 }

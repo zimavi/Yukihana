@@ -66,15 +66,21 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     public void Dispose()
     {
         if (IsSuccess)
+        {
             DisposeIfNeeded(_value);
+        }
         else
+        {
             DisposeIfNeeded(_error);
+        }
     }
 
     private static void DisposeIfNeeded<T>(T? value)
     {
         if (value is IDisposable disposable)
+        {
             disposable.Dispose();
+        }
     }
 
     #endregion
@@ -155,7 +161,10 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     public Result<TValue, TError> Tap(Action<TValue> action)
     {
         if (IsSuccess)
+        {
             action(_value!);
+        }
+
         return this;
     }
 
@@ -165,7 +174,10 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     public Result<TValue, TError> TapError(Action<TError> action)
     {
         if (IsFailure)
+        {
             action(_error!);
+        }
+
         return this;
     }
 
@@ -189,9 +201,13 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     public void Switch(Action<TValue> success, Action<TError> failure)
     {
         if (IsSuccess)
+        {
             success(_value!);
+        }
         else
+        {
             failure(_error!);
+        }
     }
 
     /// <summary>
@@ -213,7 +229,9 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
     public bool Equals(Result<TValue, TError> other)
     {
         if (IsSuccess != other.IsSuccess)
+        {
             return false;
+        }
 
         return IsSuccess
             ? EqualityComparer<TValue>.Default.Equals(_value, other._value)
