@@ -35,7 +35,7 @@ internal sealed class InitfsFileOperations(IBlockDevice blockDevice) : IFileOper
 
         long toRead = Math.Min(buffer.Length, fileSize - openFile.Position);
 
-        _logger.Info($"toRead={toRead}");
+        _logger.Trace($"toRead={toRead}");
 
         if (toRead <= 0)
         {
@@ -55,7 +55,7 @@ internal sealed class InitfsFileOperations(IBlockDevice blockDevice) : IFileOper
 
             if (blockOffset == 0 && bytesThisBlock == blockSize)
             {
-                _logger.Info("Whole block contains data, reading full block");
+                _logger.Trace("Whole block contains data, reading full block");
                 // Read a full block directly into the destination buffer.
                 _blockDevice.ReadBlock(
                     blockNumber,
@@ -64,7 +64,7 @@ internal sealed class InitfsFileOperations(IBlockDevice blockDevice) : IFileOper
             }
             else
             {
-                _logger.Info("Part of block contains data, reading it and slicing");
+                _logger.Trace("Part of block contains data, reading it and slicing");
                 // Read a partial block into a temporary buffer first.
                 Span<byte> temp = new byte[blockSize];
 
@@ -97,15 +97,15 @@ internal sealed class InitfsFileOperations(IBlockDevice blockDevice) : IFileOper
         switch (whence)
         {
             case SeekWhence.Set:
-                _logger.Info("SeekWhence=set");
+                _logger.Trace("SeekWhence=set");
                 baseOffset = 0;
                 break;
             case SeekWhence.Cur:
-                _logger.Info("SeekWhence=cur");
+                _logger.Trace("SeekWhence=cur");
                 baseOffset = openFile.Position;
                 break;
             case SeekWhence.End:
-                _logger.Info("SeekWhence=end");
+                _logger.Trace("SeekWhence=end");
                 if (openFile.Inode is InitfsInode inode)
                 {
                     baseOffset = inode.Size;

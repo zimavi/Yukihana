@@ -50,14 +50,14 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
     public bool TryFormat(ReadOnlySpan<char> source, [NotNullWhen(true)] IVfsFormatOptions? options) => throw new NotImplementedException();
     public bool TryMount(ReadOnlySpan<char> source, MountFlags flags, [NotNullWhen(true)] out IVfsSuperblock? superblock)
     {
-        s_logger.Info("Attempt to mount partition as ext4");
+        s_logger.Debug("Attempt to mount partition as ext4");
 
         superblock = null;
 
         IBlockDevice? device = ResolveDevice(source);
         if (device is null)
         {
-            s_logger.Error("Block device was not found");
+            s_logger.Debug("Block device was not found");
             return false;
         }
 
@@ -70,14 +70,14 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
         ushort magic = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(56, 2));
         if (magic != Ext4SuperblockBase.EXT4_SUPERBLOCK_MAGIC)
         {
-            s_logger.Error("Magic mismatch");
+            s_logger.Debug("Magic mismatch");
             return false;
         }
 
         Ext4SuperblockBase superblockBase = MemoryMarshal.Read<Ext4SuperblockBase>(buffer);
         if (superblockBase.RevisionLevel != Ext4SuperblockBase.EXT4_DYNAMIC_REV) // We won't support legacy version
         {
-            s_logger.Info("Revision level is 'legacy' (non-dynamic) which is not supported");
+            s_logger.Debug("Revision level is 'legacy' (non-dynamic) which is not supported");
             return false;
         }
 
@@ -86,26 +86,26 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
         Ext4SuperblockDynamic superblockDynamic = MemoryMarshal.Read<Ext4SuperblockDynamic>(buffer.Slice(offset));
         if (!ValidateSuperblock(superblockDynamic, buffer))
         {
-            s_logger.Error("Failed validate superblock");
+            s_logger.Debug("Failed validate superblock");
             return false;
         }
 
         if (!ValidateFeatures(superblockDynamic, flags, out _))
         {
-            s_logger.Error("Refused to mount");
+            s_logger.Debug("Refused to mount");
             return false;
         }
 
         if (NeedsRecovery(superblockDynamic))
         {
-            s_logger.Error("Recovery required. Not implemented and refused to mount");
+            s_logger.Debug("Recovery required. Not implemented and refused to mount");
 
             // TODO: Implement recovery after journal is done.
 
             return false;
         }
 
-        s_logger.Info("Filesystem looks fine and can be mounted");
+        s_logger.Debug("Filesystem looks fine and can be mounted");
         return false;
     }
 
@@ -170,7 +170,7 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
         if (unknownIncopat != 0) // there are incompatible features we do not support
         {
-            s_logger.Error($"Found unsupported features: {unknownIncopat:b32} ({(Ext4SuperblockIncompatibleFeatures)unknownIncopat})");
+            s_logger.Debug($"Found unsupported features: {unknownIncopat:b32} ({(Ext4SuperblockIncompatibleFeatures)unknownIncopat})");
             return false;
         }
 
@@ -178,7 +178,7 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
         if (unknownRo != 0)
         {
-            s_logger.Warn($"Found unsupported features that require read-only mount: {unknownRo:b32} ({(Ext4SuperblockRoFeatures)unknownRo})");
+            s_logger.Debug($"Found unsupported features that require read-only mount: {unknownRo:b32} ({(Ext4SuperblockRoFeatures)unknownRo})");
 
             forceReadOnly = true;
 
@@ -190,7 +190,7 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
         if (sb.RoCompatibleFeatures.HasFlag(Ext4SuperblockRoFeatures.ReadOnly))
         {
-            s_logger.Warn("Filesystem requires to mount as read-only");
+            s_logger.Debug("Filesystem requires to mount as read-only");
 
             forceReadOnly = true;
 
@@ -224,11 +224,11 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
     private bool ValidateSuperblock(Ext4SuperblockDynamic sb, ReadOnlySpan<byte> sbBytes)
     {
-        s_logger.Info("Validating superblock");
+        s_logger.Debug("Validating superblock");
 
         if (sbBytes.Length != 1024)
         {
-            s_logger.Error("Superblock length invalid (1024 expected, got {sbBytes.Length})");
+            s_logger.Debug("Superblock length invalid (1024 expected, got {sbBytes.Length})");
             return false;
         }
 
@@ -236,7 +236,7 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
         if (!hasChecksumFeature)
         {
-            s_logger.Warn("Filesystem does not support metadata checksums. Skipping superblock validation");
+            s_logger.Debug("Filesystem does not support metadata checksums. Skipping superblock validation");
             return true; // Do not check checksum
         }
 
@@ -247,23 +247,23 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
         if (hasSeed)
         {
             crc = sb.ChecksumSeed;
-            s_logger.Info($"We have checksum seed -> {crc:x}");
+            s_logger.Debug($"We have checksum seed -> {crc:x}");
         }
         else
         {
             crc = Ext4Checksum.Append(~0u, sb.Uuid);
-            s_logger.Info($"Calculated seed -> {crc}");
+            s_logger.Debug($"Calculated seed -> {crc}");
         }
 
         uint finalChecksum = ~Ext4Checksum.Append(crc, sbBytes.Slice(0, 1020));
 
         if (finalChecksum != sb.Checksum)
         {
-            s_logger.Error($"Bad superblock (expected {sb.Checksum:x}, got {finalChecksum:x})");
+            s_logger.Debug($"Bad superblock (expected {sb.Checksum:x}, got {finalChecksum:x})");
             return false;
         }
 
-        s_logger.Info("Superblock validated");
+        s_logger.Debug("Superblock validated");
         return true;
     }
 }

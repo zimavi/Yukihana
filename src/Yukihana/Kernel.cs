@@ -23,6 +23,8 @@ using Yukihana.Core.Primitives;
 using Yukihana.Security;
 using Yukihana.Resources;
 using Sys = Cosmos.Kernel.System;
+using Yukihana.Debug.Sinks;
+using Yukihana.Debug.Formatters;
 
 namespace Yukihana;
 
@@ -33,7 +35,7 @@ public sealed class Kernel : Sys.Kernel
 
     public static DateTime BootTime { get; }
 
-    private const string RAMFS_PATH = "Yukihana.Core.Resources";
+    private const string RAMFS_PATH = "Yukihana.Resources";
     private const string RAMFS_FILE = "initramfs.cpio.gz";
 
     private static string _ramfs_resource_key => string.Join('.', RAMFS_PATH, RAMFS_FILE);
@@ -46,8 +48,6 @@ public sealed class Kernel : Sys.Kernel
         BootTime = DateTime.Now;
 
         s_kernelLogger = new();
-        s_kernelLogger.Info("Static Kernel constructor called");
-        s_kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
 
         s_vfsMan = new();
     }
@@ -56,11 +56,11 @@ public sealed class Kernel : Sys.Kernel
     {
         try
         {
-            KernelLog.LogToScreen = true;
             Init();
         }
         catch (Exception ex)
         {
+            s_kernelLogger.Critical("Caught exception during Init()");
             ex.Panic("Unhandles exception during boot");
         }
     }
@@ -71,7 +71,15 @@ public sealed class Kernel : Sys.Kernel
         // STAGE 1 -> Early boot
         //
 
+        LogDispatcher.RegisterSink(new ConsoleSink(), new DeltaAnsiFormatter(), LogLevel.Debug);
+        LogDispatcher.RegisterSink(new SerialSink(), new DeltaFormatter());
+
+        s_kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
+
+        // Setup formatters and sinks
         var logger = new Logger("init");
+
+        // TODO: Implement comandline parsing
 
         VfsInit.InitVfs(logger, s_vfsMan);
 

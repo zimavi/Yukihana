@@ -60,7 +60,7 @@ public static class VersionInfo
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Core/Resources/initramfs.cpio.gz" Condition="Exists('Core/Resources/initramfs.cpio.gz')" />
+    <EmbeddedResource Include="Resources/initramfs.cpio.gz" Condition="Exists('Resources/initramfs.cpio.gz')" />
   </ItemGroup>
 
   <ItemGroup>

@@ -11,7 +11,10 @@ namespace Yukihana.Debug;
 public static class KernelPanic
 {
     private static int s_panicEntered;
-    private static readonly object s_lock = new();
+    private static readonly Lock s_lock = new();
+
+    private const int MAX_LOGS_DISPLAY = 30;
+    private const bool IS_DEBUG = false;
 
     public static void Panic(
         string reason,
@@ -26,7 +29,7 @@ public static class KernelPanic
 
         PlatformHAL.CpuOps?.DisableInterrupts();
 
-        ConsoleRenderer.Enabled = true;
+        LogDispatcher.RingBufferEnabled = false;
 
         lock (s_lock)
         {
@@ -47,17 +50,27 @@ public static class KernelPanic
         Print($"Kernel: {KernelInfoString(VersionInfo.Kernel)}", ConsoleColor.Gray);
         Print($"Framework: {FrameworkInfoString(VersionInfo.Framework)}", ConsoleColor.Gray);
         Print($"Reason: {reason}", ConsoleColor.White);
-        Print($"At: {m} ({Path.GetFileName(f)}:{l})", ConsoleColor.Gray);
+
+#pragma warning disable CS0162
+        if (IS_DEBUG)
+        {
+            Print($"At: {m} ({Path.GetFileName(f)}:{l})", ConsoleColor.Gray);
+        }
+#pragma warning restore
 
         Print("\n--- Last log entries ---", ConsoleColor.DarkGray);
 
-        LogEntry[] logs = SnapshotLogs();
-        int start = Math.Max(0, logs.Length - 20);
+        Span<LogEvent> logs = new LogEvent[LogDispatcher.RingBufferCount];
+        LogDispatcher.Snapshot(logs);
+
+        int start = Math.Max(0, logs.Length - MAX_LOGS_DISPLAY);
+
+        Print($"Older logs are chopped. {logs.Length} > {MAX_LOGS_DISPLAY}", ConsoleColor.DarkGray);
 
         for (int i = start; i < logs.Length; i++)
         {
-            LogEntry e = logs[i];
-            TimeSpan delta = e.Time - Kernel.BootTime;
+            LogEvent e = logs[i];
+            TimeSpan delta = e.Timestamp - Kernel.BootTime;
             Console.WriteLine($"[{delta.TotalSeconds,10:0.000000}] {e.Source}: {e.Message}");
         }
 
@@ -87,7 +100,7 @@ public static class KernelPanic
         Console.ResetColor();
     }
 
-    private static void MirrorToSerial(string reason, string m, string f, int l, LogEntry[] logs)
+    private static void MirrorToSerial(string reason, string m, string f, int l, ReadOnlySpan<LogEvent> logs)
     {
         Serial.WriteString("\n*** KERNEL PANIC ***\n");
         Serial.WriteString($"Kernel: {KernelInfoString(VersionInfo.Kernel)}\n");
@@ -95,14 +108,12 @@ public static class KernelPanic
         Serial.WriteString($"Reason: {reason}\n");
         Serial.WriteString($"At: {m} ({Path.GetFileName(f)}:{l})\n");
 
-        foreach (LogEntry e in logs)
+        foreach (LogEvent e in logs)
         {
-            TimeSpan delta = e.Time - Kernel.BootTime;
+            TimeSpan delta = e.Timestamp - Kernel.BootTime;
             Serial.WriteString($"[{delta.TotalSeconds,10:0.000000}] {e.Source}: {e.Message}\n");
         }
     }
-
-    private static LogEntry[] SnapshotLogs() => [.. KernelLog.Entries];
 
     // For some reason, using class' ToString causes kernel to freeze
     private static string KernelInfoString(KernelInfo info)
