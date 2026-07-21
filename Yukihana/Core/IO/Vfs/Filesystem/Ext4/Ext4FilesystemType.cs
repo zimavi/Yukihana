@@ -233,9 +233,6 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
         // Replace last 4 bytes with zeros
         Span<byte> temp = stackalloc byte[1024];
         sbBytes.CopyTo(temp);
-
-        uint rawChecksum = BinaryPrimitives.ReadUInt32LittleEndian(temp.Slice(1020, 4));
-
         temp[^1] = 0;
         temp[^2] = 0;
         temp[^3] = 0;
@@ -256,11 +253,11 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
             s_logger.Info($"Calculated seed -> {crc}");
         }
 
-        crc = ~Ext4Checksum.Append(crc, temp);
+        uint finalChecksum = ~Ext4Checksum.Append(crc, temp);
 
-        if (crc != sb.Checksum)
+        if (finalChecksum != sb.Checksum)
         {
-            s_logger.Error($"Bad superblock (expected {sb.Checksum:x}, got {crc:x})");
+            s_logger.Error($"Bad superblock (expected {sb.Checksum:x}, got {finalChecksum:x})");
             return false;
         }
 
