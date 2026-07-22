@@ -10,7 +10,6 @@ internal sealed class FilesystemProber
 {
     private static readonly IFilesystemProbe[] s_filesystemProbes = [
         new FatProbe(),
-        new Ext4Probe(),
     ];
 
     public static bool ProbeFilesystem(Partition device, out FilesystemProbeResult result)
