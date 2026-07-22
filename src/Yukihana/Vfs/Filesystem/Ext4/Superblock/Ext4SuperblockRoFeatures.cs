@@ -11,9 +11,12 @@ internal enum Ext4SuperblockRoFeatures : uint
     // Can store files larger than 2GiB
     LargeFile = 0x2,
 
+    // Not used in kernel or e2fsprogs
+    BtreeDir = 0x4,
+
     // This filesystem has files whose sizes are represented in units of logical blocks, 
     // not 512-byte sectors. This implies a very large file indeed!
-    HugeFile = 0x4,
+    HugeFile = 0x8,
 
     // Group descriptors have checksums. In addition to detecting corruption, 
     // this is useful for lazy formatting with uninitialized groups
