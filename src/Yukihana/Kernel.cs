@@ -92,9 +92,9 @@ public sealed class Kernel : Sys.Kernel
 
         Option<int> logLevel = args.GetInt32("loglevel");
         LogLevel consoleLogLevel = logLevel.Map(
-            value => (LogLevel)value, 
+            value => (LogLevel)value,
             () => LogLevel.Info);
-        
+
         foreach (LogSinkRegistration sinkReg in LogDispatcher.Sinks)
         {
             if (sinkReg.Sink is ConsoleSink)

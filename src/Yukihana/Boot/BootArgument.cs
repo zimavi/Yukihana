@@ -17,7 +17,7 @@ public readonly struct BootArgument(string name, Option<string> value)
     {
         BootArgument self = this;
         return Value.Map(
-            value => $"{self.Name}={self.Value}", 
+            value => $"{self.Name}={self.Value}",
             () => self.Name);
     }
 }
