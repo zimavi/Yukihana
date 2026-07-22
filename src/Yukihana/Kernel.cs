@@ -8,6 +8,7 @@ using Cosmos.Kernel.System.Graphics;
 using Cosmos.Kernel.System.Graphics.Fonts;
 using Cosmos.Kernel.System.Storage;
 using Cosmos.Kernel.System.Vfs;
+using Yukihana.Boot;
 using Yukihana.Core.Compression;
 using Yukihana.Core.Compression.Archives;
 using Yukihana.Core.Extensions.Primitives;
@@ -47,7 +48,7 @@ public sealed class Kernel : Sys.Kernel
     {
         BootTime = DateTime.Now;
 
-        s_kernelLogger = new();
+        s_kernelLogger = new("kern");
 
         s_vfsMan = new();
     }
@@ -56,7 +57,12 @@ public sealed class Kernel : Sys.Kernel
     {
         try
         {
-            Init();
+            s_kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
+
+            string argsStr = Environment.CommandLine;
+            BootArguments args = BootArgumentParser.Parse(argsStr);
+
+            Init(args);
         }
         catch (Exception ex)
         {
@@ -65,21 +71,39 @@ public sealed class Kernel : Sys.Kernel
         }
     }
 
-    private void Init()
+    private void Init(BootArguments args)
     {
         //
         // STAGE 1 -> Early boot
         //
 
-        LogDispatcher.RegisterSink(new ConsoleSink(), new DeltaAnsiFormatter(), LogLevel.Debug);
+        LogDispatcher.RegisterSink(new ConsoleSink(), new DeltaAnsiFormatter());
         LogDispatcher.RegisterSink(new SerialSink(), new DeltaFormatter());
-
-        s_kernelLogger.Info($"Booted at {BootTime:dd-MM-yyyy HH:mm:ss.fff}");
 
         // Setup formatters and sinks
         var logger = new Logger("init");
 
-        // TODO: Implement comandline parsing
+        logger.Trace("Parsed arguments:");
+
+        foreach (BootArgument arg in args.AsSpan())
+        {
+            logger.Trace($"  -> {arg}");
+        }
+
+        Option<int> logLevel = args.GetInt32("loglevel");
+        LogLevel consoleLogLevel = logLevel.Map(
+            value => (LogLevel)value, 
+            () => LogLevel.Info);
+        
+        foreach (LogSinkRegistration sinkReg in LogDispatcher.Sinks)
+        {
+            if (sinkReg.Sink is ConsoleSink)
+            {
+                sinkReg.MinimumLevel = consoleLogLevel;
+            }
+        }
+
+        logger.Debug("Updated console sink log level");
 
         VfsInit.InitVfs(logger, s_vfsMan);
 
