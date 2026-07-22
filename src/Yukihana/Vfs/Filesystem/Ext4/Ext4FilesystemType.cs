@@ -240,22 +240,7 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
             return true; // Do not check checksum
         }
 
-        bool hasSeed = sb.IncompatibleFeatures.HasFlag(Ext4SuperblockIncompatibleFeatures.ChecksumSeed);
-
-        uint crc;
-
-        if (hasSeed)
-        {
-            crc = sb.ChecksumSeed;
-            s_logger.Debug($"We have checksum seed -> {crc:x}");
-        }
-        else
-        {
-            crc = Ext4Checksum.Append(~0u, sb.Uuid);
-            s_logger.Debug($"Calculated seed -> {crc}");
-        }
-
-        uint finalChecksum = ~Ext4Checksum.Append(crc, sbBytes.Slice(0, 1020));
+        uint finalChecksum = Ext4Checksum.Append(~0u, sbBytes.Slice(0, 1020));
 
         if (finalChecksum != sb.Checksum)
         {
