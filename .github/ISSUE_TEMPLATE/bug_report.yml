@@ -1,0 +1,91 @@
+﻿name: Bug report
+about: Report a bug or unexpected behavior.
+title: "[Bug]: "
+labels: ["bug"]
+assignees:
+  - zimavi
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: desc
+    attributes:
+      label: Description
+      description: Describe the bug clearly and concisely.
+      placeholder: "So, the issue is..."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: How can this bug be reproduced?
+      value: |
+        1. 
+        2. 
+        3. 
+        ...
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+    validations:
+      required: true
+  - type: input
+    id: os_ver
+    attributes:
+      label: Yukihana OS commit/version
+    validations:
+      required: true
+  - type: dropdown
+    id: arch
+    attributes:
+      label: Architecture
+      multiple: true
+      options:
+        - x64
+        - arm64
+        - Other (ie. RISC-V)
+      default: 0
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Host OS
+      placeholder: ie. Fedora Linux 44
+    validations:
+      required: true
+  - type: input
+    id: vm
+    attributes:
+      label: Virtual machine
+      placeholder: ie. VMware Workstation 17
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: What are serial logs are? If none, attach screenshots with them
+  - type: textarea
+    id: info
+    attributes:
+      label: Additional Information
+      description: Is there any relevant information? If yes, share it!
+  - type: upload
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Additional screenshots if you have any
