@@ -9,7 +9,7 @@ using Cosmos.Kernel.HAL.Interfaces.Devices;
 using Cosmos.Kernel.HAL.Vfs;
 using Cosmos.Kernel.System.Storage;
 using Yukihana.Debug;
-using Yukihana.Vfs.Device;
+using Yukihana.Vfs.Filesystem.Ext4.BlockGroupDescriptor;
 using Yukihana.Vfs.Filesystem.Ext4.Superblock;
 
 namespace Yukihana.Vfs.Filesystem.Ext4;
@@ -17,7 +17,6 @@ namespace Yukihana.Vfs.Filesystem.Ext4;
 internal sealed class Ext4FilesystemType : IVfsFilesystemType
 {
     private readonly IBlockDevice? _injectedDevice;
-    private BlockDeviceStream? _blockDeviceStream;
 
     private static readonly Logger s_logger = new("ext4");
 
@@ -61,21 +60,21 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
             return false;
         }
 
-        _blockDeviceStream = new(device);
-        Span<byte> buffer = stackalloc byte[1024];
-        _blockDeviceStream.Read(1024, buffer);
+        byte[] superblockBytes = Ext4Helpers.ReadBytes(device, 0, 1024, 1024);
+        ReadOnlySpan<byte> superBuffer = superblockBytes;
 
-        // Validate magic before parsing, to avoid enum exceptions in case this is not ext4 superblock
-
-        ushort magic = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(56, 2));
+        // Validate magic before parsing to avoid exceptions on non-ext4 filesystems
+        ushort magic = BinaryPrimitives.ReadUInt16LittleEndian(superBuffer.Slice(56, 2));
         if (magic != Ext4SuperblockBase.EXT4_SUPERBLOCK_MAGIC)
         {
             s_logger.Debug("Magic mismatch");
             return false;
         }
 
-        Ext4SuperblockBase superblockBase = MemoryMarshal.Read<Ext4SuperblockBase>(buffer);
-        if (superblockBase.RevisionLevel != Ext4SuperblockBase.EXT4_DYNAMIC_REV) // We won't support legacy version
+        Ext4SuperblockBase superblockBase =
+            MemoryMarshal.Read<Ext4SuperblockBase>(superBuffer);
+
+        if (superblockBase.RevisionLevel != Ext4SuperblockBase.EXT4_DYNAMIC_REV)
         {
             s_logger.Debug("Revision level is 'legacy' (non-dynamic) which is not supported");
             return false;
@@ -83,8 +82,10 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
         int offset = Unsafe.SizeOf<Ext4SuperblockBase>();
 
-        Ext4SuperblockDynamic superblockDynamic = MemoryMarshal.Read<Ext4SuperblockDynamic>(buffer.Slice(offset));
-        if (!ValidateSuperblock(superblockDynamic, buffer))
+        Ext4SuperblockDynamic superblockDynamic =
+            MemoryMarshal.Read<Ext4SuperblockDynamic>(superBuffer[offset..]);
+
+        if (!ValidateSuperblock(superblockDynamic, superBuffer))
         {
             s_logger.Debug("Failed validate superblock");
             return false;
@@ -104,6 +105,31 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
             return false;
         }
+
+        // Read Block Group Descriptor Table
+
+        ulong blocksCount = Ext4Helpers.Combine<uint, ulong>(
+            superblockBase.BlocksCountLo,
+            superblockDynamic.BlockCountHi);
+
+        ulong blockGroups =
+            (blocksCount + superblockBase.BlocksPerGroup - 1) /
+            superblockBase.BlocksPerGroup;
+
+        ushort descriptorSize = superblockDynamic.IncompatibleFeatures.HasFlag(
+            Ext4SuperblockIncompatibleFeatures.Bits64)
+                ? superblockDynamic.GroupDescriptorSize
+                : (ushort)32;
+
+        uint tableSize = checked((uint)(blockGroups * descriptorSize));
+
+        byte[] bgdtBytes = Ext4Helpers.ReadBytes(
+            device,
+            startBlock: 2,
+            offset: 0,
+            count: tableSize);
+
+        Ext4BlockGroupDescriptorTable table = new(bgdtBytes.ToArray().AsMemory(), descriptorSize);
 
         s_logger.Debug("Filesystem looks fine and can be mounted");
         return false;
