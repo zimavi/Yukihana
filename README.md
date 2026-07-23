@@ -256,8 +256,8 @@ This project would not be possible without:
 
 * CosmosOS Gen3
 * The .NET Foundation
-* Everyone contributing to the open-source operating systems community
 * [MrLukess](https://github.com/MrLukess) for his artwork
+* Everyone contributing to the open-source operating systems community
 
 ---
 
