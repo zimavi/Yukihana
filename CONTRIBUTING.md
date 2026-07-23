@@ -1,18 +1,31 @@
 # Contributing
 
-Thank you for your interest in Yukihana OS!
+Thank you for your interest in contributing to Yukihana OS!
 
-## Before contributing
+Whether you're fixing a bug, improving documentation, or implementing a new feature, every contribution is appreciated.
 
-- Open an issue to discuss major changes.
-- Follow the existing coding style.
-- Keep commits focused.
-- Add documentation for new features where appropriate.
+## Before You Start
+
+For significant changes, please open an issue first so the design can be discussed before implementation.
+
+Small fixes such as documentation improvements, typo corrections, and minor bug fixes generally do not require prior discussion.
+
+## Development Guidelines
+
+Please follow these guidelines when contributing:
+
+- Follow the existing coding style. (run `dotnet format` locally)
+- Prefer small, focused pull requests.
+- Write clear commit messages.
+- Document public APIs using XML documentation comments.
+- Update documentation when adding or changing functionality.
+- Keep the project building successfully.
 
 ## Pull Requests
 
-Please ensure:
+Before submitting a pull request, ensure that:
 
 - The project builds successfully.
-- New code follows the project's style.
+- New code follows the project's coding style.
 - Public APIs are documented.
+- Documentation has been updated where appropriate.
