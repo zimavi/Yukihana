@@ -1,5 +1,3 @@
-# ![Yukihana OS](Yukihana)
-
 # Yukihana OS
 
 > An experimental operating system project built on top of the upcoming [CosmosOS Gen3](https://github.com/valentinbreiz/nativeaot-patcher).
@@ -7,6 +5,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE.txt)
 ![Platform](https://img.shields.io/badge/Platform-x64%20%7C%20ARM64-purple)
 ![Status](https://img.shields.io/badge/Status-Experimental-orange)
+![Checks](https://img.shields.io/github/check-suites/zimavi/Yukihana/master)
 
 > [!WARNING]
 > Yukihana OS is **experimental software** intended for education and research.
