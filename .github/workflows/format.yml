@@ -3,12 +3,12 @@ name: .NET Format
 on:
     push:
         branches:
-            - 'test/gen3'
+            - 'master'
         paths-ignore:
             - '*.md'
     pull_request:
         branches:
-            - 'test/gen3'
+            - 'master'
         paths-ignore:
             - '*.md'
 
