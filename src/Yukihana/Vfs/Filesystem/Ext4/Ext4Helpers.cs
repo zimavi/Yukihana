@@ -33,7 +33,7 @@ internal static class Ext4Helpers
         ulong totalBytes = blockOffset + count;
         ulong blocksToRead = (totalBytes + blockSize - 1) / blockSize;
 
-        byte[] temp = new byte[checked((int)(blocksToRead * blockSize))];
+        byte[] temp = GC.AllocateUninitializedArray<byte>(checked((int)(blocksToRead * blockSize)));
         device.ReadBlock(firstBlock, blocksToRead, temp);
 
         byte[] result = GC.AllocateUninitializedArray<byte>(checked((int)count));
