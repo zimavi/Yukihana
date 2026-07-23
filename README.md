@@ -105,8 +105,10 @@ Current high-level architecture:
 ```text
 .
 ├── .github/              GitHub workflows
+├── artwork/              Images used for public display
 ├── src/
 │   └── Yukihana/
+│       ├── Build/        Templates for generated files
 │       ├── Boot/         Boot argument handling
 │       ├── Bootloader/   Bootloader configuration
 │       ├── Core/         Core utilities
@@ -115,8 +117,11 @@ Current high-level architecture:
 │       ├── Security/     Authentication
 │       ├── Vfs/          Virtual filesystem (Mostly filesystems and block devices)
 │       └── Resources/    Embedded resources
+├── CODE_OF_CONDUCT.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
+├── LICENSE.txt
+├── NOTICE
 └── README.md
 ```
 
@@ -252,7 +257,8 @@ This project would not be possible without:
 * CosmosOS Gen3
 * The .NET Foundation
 * Everyone contributing to the open-source operating systems community
+* [MrLukess](https://github.com/MrLukess) for his artwork
 
 ---
 
-> *"Every operating system starts with a single boot instruction."*
+> *"Every great system starts with the courage to boot."*
