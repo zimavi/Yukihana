@@ -1,12 +1,10 @@
-﻿version: 2
+version: 2
+
 updates:
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "08:00"
-      timezone: "UTC"
     assignees:
       - "zimavi"
     labels:
@@ -23,9 +21,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "08:00"
-      timezone: "UTC"
     assignees:
       - "zimavi"
     labels:
