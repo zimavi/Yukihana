@@ -1,0 +1,31 @@
+﻿name: Documentation
+about: Report documentation issues or suggest improvements.
+title: "[Docs]: "
+labels: ["documentation"]
+assignees:
+  - zimavi
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this documentation report!
+  - type: textarea
+    id: desc
+    attributes:
+      label: Description
+      description: Describe the documentation issue.
+      placeholder: "So, the issue is..."
+    validations:
+      required: true
+  - type: textarea
+    id: improve
+    attributes:
+      label: Suggested Improvement
+      description: Explain how the documentation could be improved.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+      description: Anything else you'd like to add?
