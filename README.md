@@ -1,3 +1,5 @@
+![logo](https://github.com/zimavi/Yukihana/raw/master/artwork/readme_logo.png)
+
 # Yukihana OS
 
 > An experimental operating system project built on top of the upcoming [CosmosOS Gen3](https://github.com/valentinbreiz/nativeaot-patcher).
