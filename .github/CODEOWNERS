@@ -1,0 +1,26 @@
+# CODEOWNERS
+# See https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for the entire repository.
+* @zimavi
+
+# GitHub configuration
+/.github/ @zimavi
+
+# Source code
+/src/ @zimavi
+
+# Documentation
+*.md @zimavi
+
+# Repository metadata
+/LICENSE* @zimavi
+/NOTICE @zimavi
+/.editorconfig @zimavi
+/.gitignore @zimavi
+
+# Solution files
+/*.sln @zimavi
+/*.slnx @zimavi
+/*.props @zimavi
+/*.targets @zimavi
