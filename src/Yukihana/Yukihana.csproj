@@ -12,7 +12,7 @@
     <WarningsNotAsErrors>NAOT0007</WarningsNotAsErrors>
   </PropertyGroup>
 
-  <!-- Generate version info -->
+  <!-- Version information -->
   <PropertyGroup>
     <Year>$([System.DateTime]::UtcNow.ToString("yyyy"))</Year>
     <Month>$([System.DateTime]::UtcNow.ToString("MM"))</Month>
@@ -22,34 +22,58 @@
 
     <CosmosVersion>3, 0, 77</CosmosVersion>
     <YukihanaVersion>2, 0, 14</YukihanaVersion>
-
-    <YukihanaVersionInfo>
-      <![CDATA[
-// Yukihana OS 2026 Yukihana OS Contributors
-// Licensed under the Apache 2.0 License. See LICENSE for details.
-
-// This file is auto-generated. Do not edit.
-
-namespace Yukihana.Core%3b
-
-public static class VersionInfo
-{
-    public static readonly FrameworkInfo Framework = new(
-        name: "CosmosOS",
-        version: new Version($(CosmosVersion))
-    )%3b
-
-    public static readonly KernelInfo Kernel = new(
-        name: "Yukihana",
-        version: new Version($(YukihanaVersion)),
-        revision: new DateTime($(Year), $(Month), $(Day), $(Hour), $(Minute), 0, DateTimeKind.Utc)
-    )%3b
-}]]>
-    </YukihanaVersionInfo>
   </PropertyGroup>
 
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <WriteLinesToFile File="Core/VersionInfo.cs" Lines="$(YukihanaVersionInfo)" Overwrite="true" />
+  <ItemGroup>
+    <!-- Do not compile templates -->
+    <Compile Remove="Build/**/*.template.cs"/>
+    <None Include="Build/**/*.template.cs"/>
+  </ItemGroup>
+
+  <Target Name="GenerateVersionInfo" BeforeTargets="CoreCompile">
+    <Message Importance="High"
+            Text="=== Generating VersionInfo ==="/>
+    <Message Importance="High"
+            Text="Template: Build/VersionInfo.Template.cs"/>
+    <Message Importance="High"
+            Text="Output: $(IntermediateOutputPath)VersionInfo.g.cs"/>
+    <Message Importance="High"
+            Text="Cosmos version: $(CosmosVersion)"/>
+    <Message Importance="High"
+            Text="Yukihana version: $(YukihanaVersion)"/>
+    <Message Importance="High"
+            Text="Revision: $(Year)-$(Month)-$(Day) $(Hour):$(Minute) UTC"/>
+
+    <ReadLinesFromFile File="Build/VersionInfo.Template.cs">
+      <Output TaskParameter="Lines" ItemName="VersionTemplate"/>
+    </ReadLinesFromFile>
+
+    <Message Importance="Normal"
+           Text="Template contains @(VersionTemplate->Count()) lines."/>
+
+    <PropertyGroup>
+      <GeneratedVersionInfo>@(VersionTemplate, '%0A')</GeneratedVersionInfo>
+      <GeneratedVersionInfo>$([System.String]::Copy('$(GeneratedVersionInfo)').Replace("/*COSMOS_VERSION*/ 0, 0, 0","$(CosmosVersion)"))</GeneratedVersionInfo>
+      <GeneratedVersionInfo>$([System.String]::Copy('$(GeneratedVersionInfo)').Replace("/*YUKIHANA_VERSION*/ 0, 0, 0","$(YukihanaVersion)"))</GeneratedVersionInfo>
+      <GeneratedVersionInfo>$([System.String]::Copy('$(GeneratedVersionInfo)').Replace("/*YEAR*/ 2000","$(Year)"))</GeneratedVersionInfo>
+      <GeneratedVersionInfo>$([System.String]::Copy('$(GeneratedVersionInfo)').Replace("/*MONTH*/ 1","$(Month)"))</GeneratedVersionInfo>
+      <GeneratedVersionInfo>$([System.String]::Copy('$(GeneratedVersionInfo)').Replace("/*DAY*/ 1","$(Day)"))</GeneratedVersionInfo>
+      <GeneratedVersionInfo>$([System.String]::Copy('$(GeneratedVersionInfo)').Replace("/*HOUR*/ 0","$(Hour)"))</GeneratedVersionInfo>
+      <GeneratedVersionInfo>$([System.String]::Copy('$(GeneratedVersionInfo)').Replace("/*MINUTE*/ 0","$(Minute)"))</GeneratedVersionInfo>
+    </PropertyGroup>
+
+    <WriteLinesToFile
+        File="$(IntermediateOutputPath)VersionInfo.g.cs"
+        Lines="$(GeneratedVersionInfo)"
+        Overwrite="true"/>
+
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)VersionInfo.g.cs"/>
+    </ItemGroup>
+
+    <Message Importance="High"
+           Text="VersionInfo generated successfully."/>
+
   </Target>
 
 
