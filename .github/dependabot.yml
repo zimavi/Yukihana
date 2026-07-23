@@ -1,5 +1,4 @@
 ﻿version: 2
-
 updates:
   - package-ecosystem: "nuget"
     directory: "/"
@@ -8,18 +7,13 @@ updates:
       day: "monday"
       time: "08:00"
       timezone: "UTC"
-
     assignees:
       - "zimavi"
-
     labels:
       - "dependencies"
-
     commit-message:
       prefix: "deps"
-
     open-pull-requests-limit: 5
-
     groups:
       dependencies:
         patterns:
@@ -32,19 +26,14 @@ updates:
       day: "monday"
       time: "08:00"
       timezone: "UTC"
-
     assignees:
       - "zimavi"
-
     labels:
       - "dependencies"
       - "github-actions"
-
     commit-message:
       prefix: "ci"
-
     open-pull-requests-limit: 3
-
     groups:
       github-actions:
         patterns:
