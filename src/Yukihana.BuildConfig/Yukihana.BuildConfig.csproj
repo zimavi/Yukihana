@@ -8,6 +8,8 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <AssemblyName>ykconfig</AssemblyName>
     <RuntimeIdentifier>$(NETCoreSdkRuntimeIdentifier)</RuntimeIdentifier>
+
+    <Configuration Condition=" '$(Configuration)' == '' Or '$(Configuration)' == 'Debug' ">Release</Configuration>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win')) or '$(TargetOS)' == 'windows'">

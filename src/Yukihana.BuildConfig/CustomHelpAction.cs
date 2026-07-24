@@ -15,7 +15,8 @@ internal class CustomHelpAction(HelpAction action) : SynchronousCommandLineActio
     {
         int result = _defaultHelp.Invoke(parseResult);
 
-        //Console.WriteLine("");
+        //Console.WriteLine("About config .toml files, please visit wiki:");
+        //Console.WriteLine("  https://github.com/zimavi/Yukihana/<wiki-link>");
 
         return result;
     }

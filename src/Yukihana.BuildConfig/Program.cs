@@ -5,222 +5,24 @@ using System.CommandLine;
 using System.CommandLine.Help;
 using System.CommandLine.Parsing;
 using Serilog;
+using Serilog.Core;
 using Serilog.Sinks.Spectre;
+using Yukihana.BuildConfig.CommandHandlers;
 
 namespace Yukihana.BuildConfig;
 
 internal class Program
 {
+    private const string MUTUAL_EXCLUSIVE_MSG = "Mutually exclusive options used. Use either '{0}' or '{1}'";
+
     private static int Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
+            .MinimumLevel.ControlledBy(Globals.LevelSwitch)
             .WriteTo.Spectre("[{Level:u3}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
-        #region Global options
-
-        Option<bool> verboseOption = new("--verbose", "-v")
-        {
-            Description = "Enable verbose output."
-        };
-        Option<bool> quietOption = new("--quiet", "-q")
-        {
-            Description = "Suppress non-error output."
-        };
-
-        Option<bool> noColorOption = new("--no-color")
-        {
-            Description = "Disable ASNI colors."
-        };
-        Option<string> featuresPathOption = new("--features")
-        {
-            Description = "Path to Features directory",
-            HelpName = "path"
-        };
-        Option<string> manifestPathOption = new("--manifest")
-        {
-            Description = "Path to Manifest.toml",
-            HelpName = "path"
-        };
-        Option<string> generatedPathOption = new("--generated", "-o")
-        {
-            Description = "Path to generated output directory",
-            HelpName = "path"
-        };
-
-        #endregion
-
-        #region 'configure' command
-
-        Argument<string?> presetArgument = new("preset");
-
-        Option<bool> interactiveOption = new("--interactive", "-i")
-        {
-            Description = "Launch the interactive configurator."
-        };
-        Option<bool> cleanOption = new("--clean")
-        {
-            Description = "Remove generated files before generation."
-        };
-        Option<bool> noSaveOption = new("--no-save")
-        {
-            Description = "Do not update Current.toml."
-        };
-
-        Command configureCommand = new("configure", "Generated the build configuration.")
-        {
-            presetArgument,
-            interactiveOption,
-            cleanOption,
-            noSaveOption
-        };
-
-        #endregion
-
-        Command menuCommand = new("menu", "Launch the interactive configurator (alias to 'configure --interactive').");
-
-        #region 'check' command
-
-        Option<bool> fixOption = new("--fix")
-        {
-            Description = "Regenerate outdated files."
-        };
-
-        Command checkCommand = new("check", "Verify configuration.")
-        {
-            fixOption
-        };
-
-        #endregion
-
-        Command validateCommand = new("validate", "Validate config files.");
-
-        #region 'clean' command
-
-        Option<bool> allOption = new("--all")
-        {
-            Description = "Remove Current.toml state information."
-        };
-
-        Command cleanCommand = new("clean", "Remove generated files.")
-        {
-            allOption
-        };
-
-        #endregion
-
-        #region 'list' command
-
-        Option<bool> featuresOption = new("--features");
-        Option<bool> groupsOption = new("--groups");
-        Option<bool> presetsOption = new("--presets");
-        Option<bool> enabledOption = new("--enabled");
-        Option<bool> disabledOption = new("--disabled");
-
-        Command listCommand = new("list", "Show information.")
-        {
-            featuresOption,
-            groupsOption,
-            presetsOption,
-            enabledOption,
-            disabledOption
-        };
-
-        #endregion
-
-        #region 'preset' command
-
-        Argument<string> presetInteractionArgument = new("preset");
-
-        Command listSubcommand = new("list", "List available presets.");
-
-        Command showSubcommand = new("show", "Display specified preset.")
-        {
-            presetInteractionArgument
-        };
-
-        Command applySubcommand = new("apply", "Apply changes to specified preset.")
-        {
-            presetInteractionArgument
-        };
-
-        Command presetCommand = new("preset", "Manage presets.")
-        {
-            listSubcommand,
-            showSubcommand,
-            applySubcommand
-        };
-
-        #endregion
-
-        #region 'feature' command
-
-        Argument<string> featureArgument = new("feature");
-
-        Command enableSubcommand = new("enable", "Enable the feature.")
-        {
-            featureArgument
-        };
-
-        Command disableSubcommand = new("disable", "Disable the feature.")
-        {
-            featureArgument
-        };
-
-        Command toggleSubcommand = new("toggle", "Toggle the feature on or off.")
-        {
-            featureArgument
-        };
-
-        Command featureCommand = new("feature", "Modify single feature.")
-        {
-            enableSubcommand,
-            disableSubcommand,
-            toggleSubcommand
-        };
-
-        #endregion
-
-        Command graphCommand = new("graph", "Show included feature tree.");
-
-        #region 'info' command
-
-        Command infoCommand = new("info", "Show info about the feature.")
-        {
-            featureArgument
-        };
-
-        #endregion
-
-        Command initCommand = new("init", "Creates \"Build\" directory at current location with tool's configs");
-
-        RootCommand rootCmd = new("Yukihana build config tool")
-        {
-            // Global Options
-
-            verboseOption,
-            quietOption,
-            noColorOption,
-            featuresPathOption,
-            manifestPathOption,
-            generatedPathOption,
-
-            // Commands
-            configureCommand,
-            menuCommand,
-            checkCommand,
-            validateCommand,
-            cleanCommand,
-            listCommand,
-            presetCommand,
-            featureCommand,
-            graphCommand,
-            infoCommand,
-            initCommand
-        };
-
-        foreach (Option option in rootCmd.Options)
+        foreach (Option option in Globals.Args.RootCmd.Options)
         {
             if (option is HelpOption defaultHelpOption)
             {
@@ -229,9 +31,38 @@ internal class Program
             }
         }
 
-        // TODO: Set invocation target to command dispatcher
+        Globals.Args.FeaturesPathOption.DefaultValueFactory = _ => "./Build/Features/";
+        Globals.Args.GeneratedPathOption.DefaultValueFactory = _ => "./Build/Generated/";
+        Globals.Args.ConfigsPathOption.DefaultValueFactory = _ => "./Build/Configs/";
+        Globals.Args.ManifestPathOption.DefaultValueFactory = _ => "./Build/Manifest.toml";
 
-        ParseResult result = rootCmd.Parse(args);
+        Globals.Args.RootCmd.SetAction(RootCommandHandler.Handle);
+        // configure handler
+        // menu handler
+        // check handler
+        // validate handler
+        // clean handler
+        // list handler
+        // preset handler
+        // feature handler
+        // info handler
+        // graph handler
+        Globals.Args.InitCommand.SetAction(InitCommandHandler.Handle);
+
+        Globals.Args.RootCmd.Validators.Add(result =>
+        {
+            if (result.Children
+                .OfType<OptionResult>()
+                .Count(or => or.Option == Globals.Args.VerboseOption
+                    || or.Option == Globals.Args.QuietOption) != 1)
+            {
+                OptionResult verbose = result.Children.OfType<OptionResult>().First(or => or.Option == Globals.Args.VerboseOption);
+                OptionResult quiet = result.Children.OfType<OptionResult>().First(or => or.Option == Globals.Args.QuietOption);
+                result.AddError(string.Format(MUTUAL_EXCLUSIVE_MSG, verbose.IdentifierToken, quiet.IdentifierToken));
+            }
+        });
+
+        ParseResult result = Globals.Args.RootCmd.Parse(args);
 
         if (result.Errors.Count > 0)
         {
