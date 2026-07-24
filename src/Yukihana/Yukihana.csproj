@@ -34,7 +34,7 @@
     <Message Importance="High"
             Text="=== Generating VersionInfo ==="/>
     <Message Importance="High"
-            Text="Template: Build/VersionInfo.template.cs"/>
+            Text="Template: Build/Templates/VersionInfo.template.cs"/>
     <Message Importance="High"
             Text="Output: $(IntermediateOutputPath)VersionInfo.g.cs"/>
     <Message Importance="High"
@@ -44,7 +44,7 @@
     <Message Importance="High"
             Text="Revision: $(Year)-$(Month)-$(Day) $(Hour):$(Minute) UTC"/>
 
-    <ReadLinesFromFile File="Build/VersionInfo.template.cs">
+    <ReadLinesFromFile File="Build/Templates/VersionInfo.template.cs">
       <Output TaskParameter="Lines" ItemName="VersionTemplate"/>
     </ReadLinesFromFile>
 
