@@ -12,6 +12,9 @@ on:
         paths-ignore:
             - '*.md'
 
+permissions:
+    contents: read
+
 jobs:
     format:
         name: Check Code Formatting
