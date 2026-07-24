@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Yukihana.BuildConfig/Yukihana.BuildConfig.csproj" />
     <Project Path="src/Yukihana/Yukihana.csproj" />
   </Folder>
 </Solution>

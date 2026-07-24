@@ -34,7 +34,7 @@
     <Message Importance="High"
             Text="=== Generating VersionInfo ==="/>
     <Message Importance="High"
-            Text="Template: Build/VersionInfo.template.cs"/>
+            Text="Template: Build/Templates/VersionInfo.template.cs"/>
     <Message Importance="High"
             Text="Output: $(IntermediateOutputPath)VersionInfo.g.cs"/>
     <Message Importance="High"
