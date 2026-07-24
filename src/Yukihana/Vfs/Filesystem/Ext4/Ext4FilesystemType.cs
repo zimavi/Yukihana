@@ -85,6 +85,8 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
         Ext4SuperblockDynamic superblockDynamic =
             MemoryMarshal.Read<Ext4SuperblockDynamic>(superBuffer[offset..]);
 
+        Ext4Superblock super = new(superblockBase, superblockDynamic);
+
         if (!ValidateSuperblock(superblockDynamic, superBuffer))
         {
             s_logger.Debug("Failed validate superblock");
@@ -108,17 +110,15 @@ internal sealed class Ext4FilesystemType : IVfsFilesystemType
 
         // Read Block Group Descriptor Table
 
-        ulong blocksCount = Ext4Helpers.Combine<uint, ulong>(
-            superblockBase.BlocksCountLo,
-            superblockDynamic.BlockCountHi);
+        ulong blocksCount = super.BlocksCount;
 
         ulong blockGroups =
-            (blocksCount + superblockBase.BlocksPerGroup - 1) /
-            superblockBase.BlocksPerGroup;
+            (blocksCount + super.BlocksPerGroup - 1) /
+            super.BlocksPerGroup;
 
         ushort descriptorSize = superblockDynamic.IncompatibleFeatures.HasFlag(
             Ext4SuperblockIncompatibleFeatures.Bits64)
-                ? superblockDynamic.GroupDescriptorSize
+                ? super.GroupDescriptorSize
                 : (ushort)32;
 
         uint tableSize = checked((uint)(blockGroups * descriptorSize));

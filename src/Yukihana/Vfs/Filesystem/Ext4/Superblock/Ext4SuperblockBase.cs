@@ -18,7 +18,7 @@ internal readonly struct Ext4SuperblockBase
     public readonly uint BlocksCountLo;
     public readonly uint RBlockCountLo; // This number of blocks can only be allocated by super-user.
     public readonly uint FreeBlocksCountLo;
-    public readonly uint FreeInodesCountLo;
+    public readonly uint FreeInodesCount;
     public readonly uint FirstDataBlock;
     public readonly uint LogBlockSize; // Get block size by 1024 << LogBlockSize.
     public readonly uint LogClusterSize;
@@ -38,6 +38,6 @@ internal readonly struct Ext4SuperblockBase
     public readonly Ext4SuperblockCreator CreatorOS;
     public readonly uint RevisionLevel;
     public readonly ushort DefaultUid; // For reserved blocks.
-    public readonly ushort DefaultGuid;
+    public readonly ushort DefaultGid;
 
 }
