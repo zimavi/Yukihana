@@ -11,5 +11,3 @@ src/Yukihana.BuildConfig/publish/
 
 # Build system
 ykconfig*
-src/Yukihana/Build/*
-!src/Yukihana/Templates/**/*.cs
