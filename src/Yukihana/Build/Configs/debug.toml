@@ -2,5 +2,6 @@ description = "Debug configuration"
 
 enabled = [
     "init_ram_fs",
+    "ext4",
     "sinks_serial"
 ]

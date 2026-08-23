@@ -6,6 +6,9 @@ using Cosmos.Kernel.System.Filesystems.Fat;
 using Cosmos.Kernel.System.Vfs;
 using Yukihana.Debug;
 using Yukihana.Vfs.Config;
+#if FEATURE_EXT4
+using Yukihana.Vfs.Filesystem.Ext4;
+#endif
 
 namespace Yukihana.Vfs;
 
@@ -14,6 +17,9 @@ internal static class VfsInit
     internal static readonly Dictionary<string, IVfsFilesystemType> s_filesystemTypes = new(StringComparer.Ordinal)
     {
         { "fat", new FatFilesystemType() },
+#if FEATURE_EXT4
+        { "ext4", new Ext4FilesystemType() },
+#endif
     };
 
     public static void InitVfs(Logger logger, VfsConfigManager vfsMan)
