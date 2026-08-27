@@ -30,13 +30,13 @@ jobs:
           fetch-depth: 0
 
       - name: 🔍 Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.8
+        uses: github/codeql-action/init@v4.37.9
         with:
           languages: actions
           build-mode: none
 
       - name: 🔎 Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.8
+        uses: github/codeql-action/analyze@v4.37.9
         with:
           category: "/language:actions"
 
@@ -81,7 +81,7 @@ jobs:
         run: cosmos install -y
 
       - name: 🔍 Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.8
+        uses: github/codeql-action/init@v4.37.9
         with:
           languages: csharp
           build-mode: manual
@@ -105,6 +105,6 @@ jobs:
         run: cosmos build -v -c Release -a x64
 
       - name: 🔎 Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.8
+        uses: github/codeql-action/analyze@v4.37.9
         with:
           category: "/language:csharp"
