@@ -1,10 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
+  "assignees": ["zimavi"],
+  "reviewers": ["zimavi"],
 
   "automerge": true,
   "automergeType": "pr",
   "platformAutomerge": true,
+  "assignAutomerge": true,
 
   "packageRules": [
     {
